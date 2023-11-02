@@ -453,10 +453,84 @@ void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile)
     Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "START");
 
 //    But_opt1 = (Read_sfk == PAUSE) ? OPT_FLAT : 0; // button color change if the button during press
-/*    App_WrCoCmd_Buffer(phost, TAG(PAUSE));
-    Gpu_CoCmd_FgColor(phost, 0x7D7D7D);
-    Gpu_CoCmd_Button(phost, 207, 112, 90, 36, 28, 0, "PAUSE");*/
+    App_WrCoCmd_Buffer(phost, TAG(PAUSE));
+	  App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));//soon
+    Gpu_CoCmd_FgColor(phost, 0xADAF3C);
+    Gpu_CoCmd_Button(phost, 207, 112, 90, 36, 28, 0, "PAUSE");
+
+//    But_opt1 = (Read_sfk == STOP) ? OPT_FLAT : 0; // button color change if the button during press
+    App_WrCoCmd_Buffer(phost, TAG(STOP));
+    Gpu_CoCmd_FgColor(phost, 0xAA0000);
+    Gpu_CoCmd_Button(phost, 25, 157, 273, 36, 28, 0, "STOP");
+    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	  App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));//soon
+
+    Gpu_CoCmd_Text(phost, 52, 201, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Profile ID: %d", profile.profileId);
+    Gpu_CoCmd_Text(phost, 62, 214, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "No. of Cycles: %d", profile.Cycles);
+
+    filling_tube = profile.Tube_No_x * profile.Tube_No_y;
+
+    Gpu_CoCmd_Text(phost, 60, 228, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Filling tube: %d", filling_tube);
+
+    Disp_End(phost);
+}
+
+//soon B
+void Home_Menu2(Gpu_Hal_Context_t *phost, Profile &profile)
+{
+    operating = 1;
+    parameter = 0;
+    count = 0;
+    stCurrentLen = 0;
+    memset(stCurrent, 0, sizeof(stCurrent));
+    PageNum = 0;
+
+    uint16_t But_opt1;
+    uint16_t Read_sfk = 0;
+
+    int32_t filling_tube = 0;
+
+    Read_sfk = Read_Keypad();
+
+    Gpu_CoCmd_FlashFast(phost, 0);
+    Gpu_CoCmd_Dlstart(phost);
+
+    App_WrCoCmd_Buffer(phost, CLEAR_TAG(255));
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));
+    Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+    App_WrCoCmd_Buffer(phost, TAG(2));
+    Gpu_CoCmd_Button(phost, 208, 5, 90, 36, 28, OPT_FORMAT, "Settings");
+    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0));
+//    Gpu_CoCmd_Text(phost, 160, 52, 31, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "XQ");
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));
+    Gpu_CoCmd_Text(phost, 159, 80, 30, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "SDB-1R");
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(193, 64, 0));
+    App_WrCoCmd_Buffer(phost, BEGIN(LINES));
+    App_WrCoCmd_Buffer(phost, VERTEX2F(0, 1648));
+    App_WrCoCmd_Buffer(phost, VERTEX2F(5120, 1648));
+    App_WrCoCmd_Buffer(phost, END());
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+    App_WrCoCmd_Buffer(phost, TAG_MASK(255));
+
     
+//    But_opt1 = (Read_sfk == START) ? OPT_FLAT : 0; // button color change if the button during press
+    App_WrCoCmd_Buffer(phost, TAG(START));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));//soon
+    Gpu_CoCmd_FgColor(phost, 0x006400);
+    Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "START");
+
+//    But_opt1 = (Read_sfk == PAUSE) ? OPT_FLAT : 0; // button color change if the button during press
+    App_WrCoCmd_Buffer(phost, TAG(PAUSE));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));//soon
+    Gpu_CoCmd_FgColor(phost, 0xADAF3C);
+    Gpu_CoCmd_Button(phost, 207, 112, 90, 36, 28, 0, "PAUSE");
 
 //    But_opt1 = (Read_sfk == STOP) ? OPT_FLAT : 0; // button color change if the button during press
     App_WrCoCmd_Buffer(phost, TAG(STOP));
@@ -473,6 +547,81 @@ void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile)
 
     Disp_End(phost);
 }
+//soon E
+
+//20231005 : ediongson - Begin
+void Home_Menu3(Gpu_Hal_Context_t *phost, Profile &profile)
+{
+    operating = 1;
+    parameter = 0;
+    count = 0;
+    stCurrentLen = 0;
+    memset(stCurrent, 0, sizeof(stCurrent));
+    PageNum = 0;
+
+    uint16_t But_opt1;
+    uint16_t Read_sfk = 0;
+
+    int32_t filling_tube = 0;
+
+    Read_sfk = Read_Keypad();
+
+    Gpu_CoCmd_FlashFast(phost, 0);
+    Gpu_CoCmd_Dlstart(phost);
+
+    App_WrCoCmd_Buffer(phost, CLEAR_TAG(255));
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));
+    Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+    App_WrCoCmd_Buffer(phost, TAG(2));
+    Gpu_CoCmd_Button(phost, 208, 5, 90, 36, 28, OPT_FORMAT, "Settings");
+    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0));
+//    Gpu_CoCmd_Text(phost, 160, 52, 31, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "XQ");
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));
+    Gpu_CoCmd_Text(phost, 159, 80, 30, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "SDB-1R");
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(193, 64, 0));
+    App_WrCoCmd_Buffer(phost, BEGIN(LINES));
+    App_WrCoCmd_Buffer(phost, VERTEX2F(0, 1648));
+    App_WrCoCmd_Buffer(phost, VERTEX2F(5120, 1648));
+    App_WrCoCmd_Buffer(phost, END());
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+    App_WrCoCmd_Buffer(phost, TAG_MASK(255));
+
+    
+//    But_opt1 = (Read_sfk == START) ? OPT_FLAT : 0; // button color change if the button during press
+    App_WrCoCmd_Buffer(phost, TAG(START));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(128, 128, 128));//soon
+    Gpu_CoCmd_FgColor(phost, 0x006400);
+    Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "START");
+
+//    But_opt1 = (Read_sfk == PAUSE) ? OPT_FLAT : 0; // button color change if the button during press
+    App_WrCoCmd_Buffer(phost, TAG(PAUSE));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));//soon
+    Gpu_CoCmd_FgColor(phost, 0xADAF3C);
+    Gpu_CoCmd_Button(phost, 207, 112, 90, 36, 28, 0, "PAUSE");
+
+//    But_opt1 = (Read_sfk == STOP) ? OPT_FLAT : 0; // button color change if the button during press
+    App_WrCoCmd_Buffer(phost, TAG(STOP));
+    Gpu_CoCmd_FgColor(phost, 0xAA0000);
+    Gpu_CoCmd_Button(phost, 25, 157, 273, 36, 28, 0, "STOP");
+    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+
+    Gpu_CoCmd_Text(phost, 52, 201, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Profile ID: %d", profile.profileId);
+    Gpu_CoCmd_Text(phost, 62, 214, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "No. of Cycles: %d", profile.Cycles);
+
+    filling_tube = profile.Tube_No_x * profile.Tube_No_y;
+
+    Gpu_CoCmd_Text(phost, 60, 228, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Filling tube: %d", filling_tube);
+
+    Disp_End(phost);
+}
+//20231005 : ediongson - End
 
 void Disp_End(Gpu_Hal_Context_t *phost)
 {

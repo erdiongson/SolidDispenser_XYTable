@@ -151,7 +151,7 @@ typedef PROGMEM const int32_t prog_int32_t;
 #define NUM_ENTER 247   // Enter Numeric Number
 #define STOP 5
 #define START 3
-#define PAUSE 400 //previously 4
+#define PAUSE 4
 
 #define LINE_STARTPOS DispWidth / 50 // Start of Line
 #define LINE_ENDPOS DispWidth        // max length of the line
