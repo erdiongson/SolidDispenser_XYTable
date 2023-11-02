@@ -3,7 +3,7 @@
  * Copyright (c) Riverdi Sp. z o.o. sp. k. <riverdi@riverdi.com>
  * Copyright (c) Skalski Embedded Technologies <contact@lukasz-skalski.com>
  */
-#define FWVER "014"
+#define FWVER "014b"
 #define DEBUG 0
 
 #ifndef _PLATFORM_H_

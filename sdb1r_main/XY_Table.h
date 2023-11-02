@@ -11,7 +11,7 @@ Date created - 2022.12.14 - XentiQ version
 #define MAX_TUBES_X 13
 #define MAX_TUBES_Y 17
 
-#define SERIAL_2_DEFAULT  //Comment this out for Serial 3 usage
+//#define SERIAL_2_DEFAULT  //Comment this out for Serial 3 usage
 
 enum class ActionState
 {

@@ -1597,8 +1597,8 @@ void Keyboard(Gpu_Hal_Context_t *phost, Profile &profile, int32_t tube_no_x, int
   //  trayOriginY_col_str[0]=0;
   //  cyclesNo_str[0]=0;
     for (tval = 0; tval < MAX_LINES; tval++)
-		Buffer.notepad[tval][0]=0;//soon
-        //soon memset(&Buffer.notepad[tval], '\0', sizeof(Buffer.notepad[tval]));
+		//Buffer.notepad[tval][0]=0;//try014b
+        memset(&Buffer.notepad[tval], '\0', sizeof(Buffer.notepad[tval]));//try014b
 
     /*intial setup*/
     Line = 0;                                                   // Starting line
