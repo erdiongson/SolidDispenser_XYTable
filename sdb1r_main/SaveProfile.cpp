@@ -38,6 +38,19 @@ bool loadProfile(Profile &profile)
     profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
     
     profile.profileId = 1; // This can be fixed since we have only one profile now
+
+	//soon B
+	if(profile.Tube_No_x==0 && profile.Tube_No_y == 0)
+	{
+		profile.trayOriginX=0;
+		profile.trayOriginY=0;
+		profile.Tube_No_x=2;
+		profile.Tube_No_y=2;
+		profile.pitch_x=10;
+		profile.pitch_y=10;
+		profile.Cycles=2;
+	}
+	//soon E
     return true;
 }
 

@@ -3,6 +3,8 @@
  * Copyright (c) Riverdi Sp. z o.o. sp. k. <riverdi@riverdi.com>
  * Copyright (c) Skalski Embedded Technologies <contact@lukasz-skalski.com>
  */
+#define FWVER "014"
+#define DEBUG 0
 
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
@@ -152,6 +154,13 @@ typedef PROGMEM const int32_t prog_int32_t;
 #define STOP 5
 #define START 3
 #define PAUSE 4
+//soon B
+#define SETTING 2
+#define LOGO 0
+#define MAINMENU 0
+#define RUNMENU 1
+#define PAUSEMENU 2
+//soon E
 
 #define LINE_STARTPOS DispWidth / 50 // Start of Line
 #define LINE_ENDPOS DispWidth        // max length of the line
@@ -176,7 +185,6 @@ extern uint8_t buttonTag;
 
 #define STEPS_PER_UNIT_X 400 // (X step motor specs: lead screw is 4mm, 1600 pulse/rev(8 microsteps driver), 4mm/1600 = 0.0025mm, 1mm/0.0025 = 400 steps)
 #define STEPS_PER_UNIT_Y 160 // (Y step motor specs: lead screw is 10mm, 1600 pulse/rev(8 microsteps driver), 10mm/1600 = 0.0025mm, 1mm/0.00625 = 160 steps/unit)
-
 extern Gpu_Hal_Context_t host, *phost;
 
 extern int tag;

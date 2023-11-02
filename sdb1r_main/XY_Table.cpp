@@ -78,6 +78,8 @@ void init_Motors()
 void Homing()
 {
   Serial.println("Homing Start...");
+#if !DEBUG //soon B Debug
+ 
   stepper_x.moveTo(40000);
   while (digitalRead(Limit_S_x_Homing) != 0)
     stepper_x.run();
@@ -95,37 +97,19 @@ void Homing()
   stepper_y.setCurrentPosition(0);
   stepper_y.setMaxSpeed(motor_y_speed);
   stepper_y.setAcceleration(motor_y_Acceleration);
-
+#endif //soon E Debug
 }
 
-void runStepper_normal(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg)
+bool runStepper_normal(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg)
 {
-  Serial.println("Stepper Movement");
-  Profile profile; //testcode 7 this is enable
+	bool ret=TRUE;//soon
+	uint8_t buttonTag;//try013
+  Profile profile;//testcode 7 this is enable
   stepper.move(distance);
-  
-  while (pauseState.isPaused)//soon B
-  {
-    if(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == START) 
-  {
-    pauseState.isPaused=false;  
-    Home_Menu2(&host, profile);
-    }
-  else Home_Menu(&host, profile);
-  }//soon E
-  
+
+
   while (stepper.distanceToGo() != 0)
   {
-    while (pauseState.isPaused)//soon B
-    {
-      if(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == START) 
-      {
-        pauseState.isPaused=false;  
-        Home_Menu2(&host, profile);
-      }
-      else Home_Menu(&host, profile);
-    }//soon E
-    
     if (isStopped || digitalRead(limitPin) == 0)
     {
       isStopped = true;
@@ -138,36 +122,37 @@ void runStepper_normal(AccelStepper &stepper, int distance, uint8_t limitPin, co
       break;
     }
 
-    //    uint8_t buttonTag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
-    int checkResult = checkButtonTag(buttonTag);
-    if (checkResult == -1)
+    buttonTag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);//try013
+    //try013 int checkResult = checkButtonTag(buttonTag);
+	//try013 Serial.println(checkResult, HEX);//try013
+	if (buttonTag==STOP)//try013 checkResult == -1)
     {
-      isStopped = true; // Make sure the system will stop completely after Homing
+      Home_Menu(&host, profile,MAINMENU);//try014
+      //try013 isStopped = true; // Make sure the system will stop completely after Homing
       Homing();
       profile.Cycles = 0;
       profile.Tube_No_x = 0;
       profile.Tube_No_y = 0;
       currentState = STOP_BUTTON;
+	  ret=FALSE;//try013
       break;
     }
-    else if (!checkResult)
-    {
-      break;
-    }
-    
-    while (pauseState.isPaused)//soon B
-    {
-      if(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == START) 
-      {
-        pauseState.isPaused=false;  
-        Home_Menu2(&host, profile);
-      }
-      else Home_Menu(&host, profile);
-    }//soon E
-    
+	else   	if(buttonTag == PAUSE) //try013 B
+  			{
+  				pauseState.isPaused=TRUE;
+  				Home_Menu(&host, profile,PAUSEMENU);
+
+  			}//try013 E
+    //try013 else if (!checkResult)
+    //try013 {
+    //try013	ret=FALSE;//soon
+    //try013  break;
+    //try013}
     stepper.run();
   }
   stepper.stop();
+
+  return ret;//soon
 }
 
 bool checkButtonTag(uint8_t buttonTag)
@@ -295,8 +280,7 @@ void updateStateMachine(uint8_t buttonTag)
 
 void startProcess() {
   Serial.println("startProcess - START");
-  Home_Menu2(&host, profile);//soon
-  
+  Home_Menu(&host, profile,RUNMENU);//soon
   if (pauseState.isPaused)
   {
     isResuming = true;
@@ -349,8 +333,9 @@ void pausedProcess() {
 void stopProcess() {
   Serial.println("stopProcess - START");
   Response response;
+  Home_Menu(&host, profile,MAINMENU);//try014
   sendCommand(SDB_Dispense_STOP);
-  if (response.command == (uint8_t)SDB_Dispense_STOP)
+  if (1) //try014 response.command == (uint8_t)SDB_Dispense_STOP)
   {
     Homing();
     isStopped = true;
@@ -362,16 +347,21 @@ void stopProcess() {
     //    //    Homing();
   }
   Serial.println("stopProcess - END");
-  currentState = IDLE;
+  currentState = IDLE;  
+
 }
 
-void checkAndMoveStepper_normal(AccelStepper & stepper, int steps, int limit, const char *message)
-{
-  runStepper_normal(stepper, steps, limit, message);
-}
+//soon void checkAndMoveStepper_normal(AccelStepper & stepper, int steps, int limit, const char *message)
+//soon {
+//soon  runStepper_normal(stepper, steps, limit, message);
+//soon }
 
-void vibrateAndCheckPause()
+bool vibrateAndCheckPause()//soon
 {
+	uint8_t Read_tag = 0,i;//soon
+	bool pausestop=FALSE;
+	bool ret=true;//soon return true if continue. return false if hardstop
+
   // Only vibrate if isStopped is false
   if (!(isStopped))
   {
@@ -385,19 +375,40 @@ void vibrateAndCheckPause()
         sendCommand(Vibrate_Mode_ON);
         Serial.print("Vibrate_Mode_ON:  ");
         Serial.println(Vibrate_Mode_ON);
-        delay(800);
+		//soon B
+		for(i=0;i<8;i++)
+		{
+	        if(!pausestop)
+			{
+				Read_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
+				if(Read_tag==STOP || Read_tag==PAUSE) pausestop=TRUE;
+	        }
+			delay(100);
+		}
+		//soon E
         sendCommand(Vibrate_Mode_OFF);
         Serial.print("Vibrate_Mode_OFF:  ");
         Serial.println(Vibrate_Mode_OFF);
         pauseState.lastAction = ActionState::VibrateOn; // Update the last action
       }
 
-      if (Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == 4) // Pause button
+	  if(!pausestop)  Read_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);//soon
+
+      if (Read_tag == 4) // Pause button//soon
       {
-        pauseState.isPaused = true;
+        pauseState.isPaused = true;		
+		Home_Menu(&host, profile,PAUSEMENU);
       }
       else
-      {
+      { 
+		  //soon B
+		  if (Read_tag == STOP)
+		  {
+			  ret=false;
+			  updateStateMachine(Read_tag);
+		  }
+		  //soon E
+
         delay(200);
         sendCommand(Vibrate_Mode_OFF);
         Serial.print("Vibrate_Mode_OFF:  ");
@@ -405,6 +416,7 @@ void vibrateAndCheckPause()
       }
     }
   }
+  return ret;//soon
 }
 
 void turnOffVibration()
@@ -415,29 +427,92 @@ void turnOffVibration()
   }
 }
 
-void dispenseAndCheckPause()
+bool dispenseAndCheckPause()//soon
 {
+	uint8_t Read_tag = 0,i;//soon
+	bool pausestop=FALSE;
+	bool ret=true;//soon return true if continue. return false if hardstop
+
   // Only dispense if isStopped is false
   if (!(isStopped))
   {
     if (!(pauseState.isPaused && pauseState.lastAction >= ActionState::DispenseStart))
     {
       sendCommand(SDB_Dispense_START);
-      delay(800);
+	  //soon B
+	  for(i=0;i<8;i++)
+	  {
+		  if(!pausestop)
+		  {
+			  Read_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
+			  if(Read_tag==STOP || Read_tag==PAUSE) pausestop=TRUE;
+		  }
+		  delay(100);
+	  }
+	  //soon E
+
       sendCommand(SDB_Dispense_STOP);
       pauseState.lastAction = ActionState::DispenseStart;
 
-      if (Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == PAUSE) // Pause button
+	  if(!pausestop)  Read_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);//soon
+
+      if (Read_tag == PAUSE) // Pause button//soon
       {
-        pauseState.isPaused = true;
+        pauseState.isPaused = true;	
+		Home_Menu(&host, profile,PAUSEMENU);
       }
       else
       {
+      	//soon B
+		if (Read_tag == STOP)
+		{
+			ret=false;
+			updateStateMachine(Read_tag);
+		}
+		//soon E
         delay(200);
       }
     }
   }
+  return ret;//soon
 }
+
+//soon B
+bool PauseOperation(void)
+{
+	uint8_t Read_tag = 0;
+	bool ret=true;//soon return true if continue. return false if hardstop
+
+	if(pauseState.isPaused)	Serial.println("pauseProcess - START");
+
+	while (pauseState.isPaused)
+	{
+	  Read_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
+	  if(Read_tag == START || Read_tag == STOP ) 
+	  {
+		  pauseState.isPaused=false;  
+		  if(Read_tag == START ) 
+		  {
+			Serial.println("pauseProcess - END");
+		  	Home_Menu(&host, profile,RUNMENU);
+			//Serial.println("T50");//soon
+		  }
+		  else 
+		  {//when stop pressed
+		  	//Serial.println("T60");//soon
+		  	Serial.println("pauseProcess - STOP");
+		  	//Home_Menu(&host, profile,MAINMENU);
+			updateStateMachine(Read_tag);
+			ret=false;
+		  }
+	  }
+	  
+	}
+
+	return ret;
+}
+//soon E
+
 
 void RunOrResume_profile(bool isResuming)
 {
@@ -466,8 +541,8 @@ void RunOrResume_profile(bool isResuming)
     {
       	Homing();
 	  	Serial.println("Required");//soon
-      Serial.println("Cycle y  x");//soon
-   	  Serial.print(profile.Cycles,HEX);//soon
+      	Serial.println("Cycle y  x");//soon
+   	  	Serial.print(profile.Cycles,HEX);//soon
     	Serial.print("     ");//soon
     	Serial.print(profile.Tube_No_y,HEX);//soon
     	Serial.print("  ");//soon
@@ -479,16 +554,24 @@ void RunOrResume_profile(bool isResuming)
     for (int y = (isResuming && pauseState.lastAction <= ActionState::MoveY) ? pauseState.currentY : 0; y < profile.Tube_No_y; y++)
     {
 
-      if (!checkButtonTag(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)))
-        return;
+      //soon if (!checkButtonTag(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)))
+        //soon return;
+	  if(!PauseOperation()) return;//soon
 
       if (y != 0 && !(pauseState.isPaused && pauseState.lastAction == ActionState::MoveY))
       {
-        checkAndMoveStepper_normal(stepper_y, profile.pitch_y * STEPS_PER_UNIT_Y, Limit_S_y_MAX, "Checking Y MaxLimit...");
+	       if(!runStepper_normal(stepper_y, profile.pitch_y * STEPS_PER_UNIT_Y, Limit_S_y_MAX, "Checking Y MaxLimit..."))
+		   		return;//soon
       }
+
+	  if(!PauseOperation()) return;//soon
+	  //Serial.println("T80");//soon
+
+
 
       if (!performVibrateAndDispenseOperations())
         return;
+	  //Serial.println("T81");//soon
 
       for (int x = (isResuming && pauseState.lastAction <= ActionState::MoveX) ? pauseState.currentX : 0; x < profile.Tube_No_x - 1; x++)
       {
@@ -498,17 +581,29 @@ void RunOrResume_profile(bool isResuming)
     	Serial.print(y,HEX);//soon
     	Serial.print("  ");//soon
     	Serial.println(x,HEX);//soon
-        if (!checkButtonTag(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)))
-          return;
+        //soon if (!checkButtonTag(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)))
+         //soon  return;
+		if(!PauseOperation()) return;//soon
+		//Serial.println("T82");//soon
+
 
         int direction = y % 2 == 0 ? -1 : 1;
-        checkAndMoveStepper_normal(stepper_x, direction * profile.pitch_x * STEPS_PER_UNIT_X, Limit_S_x_MAX, "Checking X MaxLimit...");
+        if(!runStepper_normal(stepper_x, direction * profile.pitch_x * STEPS_PER_UNIT_X, Limit_S_x_MAX, "Checking X MaxLimit..."))//soon
+			return; //soon
 
-        if (!checkButtonTag(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)))
-          return;
+        //soon if (!checkButtonTag(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)))
+        //soon return;
+		if(!PauseOperation()) return;//soon
+		//Serial.println("T83");//soon
+
 
         if (!performVibrateAndDispenseOperations())
           return;
+		//Serial.println("T84");//soon
+
+		if(!PauseOperation()) return;//soon
+		//Serial.println("T85");//soon
+
 
         filledTubes[x][y] = true;
         pauseState.filledTubes[x][y] = true;
@@ -533,7 +628,10 @@ void RunOrResume_profile(bool isResuming)
 
   if (!pauseState.isPaused)
   {
+  
     finishProcess();
+	Home_Menu(&host, profile,MAINMENU);//soon
+
   }
 
   clearPauseState();
@@ -542,55 +640,21 @@ void RunOrResume_profile(bool isResuming)
 
 bool performVibrateAndDispenseOperations()
 {
-  vibrateAndCheckPause();
-  //soon if (pauseState.isPaused)
-    //soon return false;
-  while (pauseState.isPaused)//soon B
-  {
-  	if(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == START) 
-	  {
-		pauseState.isPaused=false;	
-		Home_Menu2(&host, profile);
-  	}
-	else Home_Menu(&host, profile);
-		
-  }//soon E
-
-
-
-  dispenseAndCheckPause();
-  //soon if (pauseState.isPaused)
-    //soon return false;
-  while (pauseState.isPaused)//soon B
-  {
-	  if(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == START) 
-	  {
-		  pauseState.isPaused=false;  
-		  Home_Menu2(&host, profile);
-	  }
-	  else Home_Menu(&host, profile);
-
-  }//soon E
-
-
-
-  vibrateAndCheckPause();
-  //soon if (pauseState.isPaused)
-    //soon return false;
-  while (pauseState.isPaused)//soon B
-  {
-	  if(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG) == START) 
-	  {
-		  pauseState.isPaused=false;  
-		  Home_Menu2(&host, profile);
-	  }
-	  else Home_Menu(&host, profile);
-
-  }//soon E
-
-
-  return true;
-}
+	  bool_t ret=true; //soon return true if continue. return false if hardstop
+	//soon B	
+	ret&=vibrateAndCheckPause();
+	//try014 B
+	if(ret)	ret&=PauseOperation();
+	
+	if(ret) ret&=dispenseAndCheckPause();
+ 	if(ret) ret&=PauseOperation();
+	
+	if(ret) ret&=vibrateAndCheckPause();
+	if(ret) ret&=PauseOperation();
+	//try014 E
+	return ret;
+	//soon E
+}//soon E
 
 
 void handleCycleStatus(int cycle)
@@ -644,6 +708,9 @@ void setup()
   // handle_uart_command(Handshake);
 
   Logo_XQ_trans(&host);
+  Serial.print("Firmware version :");
+  Serial.println(FWVER);//soon send firmware version
+
 
   // Disble/Enable handshaking
   sendCommand(Handshake);
@@ -651,8 +718,10 @@ void setup()
       sendCommand(Handshake);
       delay(100);
     }*/
-/*    while (receiveResponse().command != 0x60)
-      delay(100);*/
+#if !DEBUG//soon B Debug
+    while (receiveResponse().command != 0x60)
+      delay(100);
+#endif //soon E Debug
 
   sendCommand(Vibrate_Mode_OFF);
   sendCommand(SDB_Dispense_STOP);
@@ -661,12 +730,13 @@ void setup()
   //     //Do nothing;
   //   };
 
-//      Homing();
+      Homing();
   //  profile.profileId = getLastUsedProfileId();
   //  loadProfile(profile, profile.profileId); // Load the last saved Profile
   loadProfile(profile);
 
-  Home_Menu(&host, profile);
+  Home_Menu(&host, profile,MAINMENU);//soon
+
 
 }
 
@@ -675,17 +745,19 @@ void loop()
   while (true) {
     buttonTag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG); // get button pressed
 
-    if (App_Read_Tag(phost)) // Allow if the Key is released
+    if (buttonTag!=0)//soon App_Read_Tag(phost)) // Allow if the Key is released
     {
       if (PageNum == 0) // Main menu
       {
         Serial.println("PAGE 0 - START");
+		Home_Menu(&host, profile,MAINMENU);//soon
         updateStateMachine(buttonTag);
 
         if (buttonTag == 2) // Setting button
         {
           Serial.println("buttonTag =2 , Setting buttons ");
           Config_Settings(phost, tube_no_x, tube_no_y, pitch_row_x, pitch_col_y, trayOriginX_row, trayOriginY_col, cyclesNo, profile);
+		  delay(500);//soon
         }
         Serial.println("PAGE 0 - END");
       }
@@ -702,7 +774,8 @@ void loop()
           if (buttonTag == 6) // Home button
           {
             Serial.println("Button Pressed: HOME");
-            Home_Menu(&host, profile);
+            Home_Menu(&host, profile,MAINMENU);		
+			delay(500);//soon
             break;
           }
           else if (buttonTag == 7) // Profile_Menu screen
@@ -711,7 +784,7 @@ void loop()
             SelectProfile_flag = true;
             //            loadProfile(profile, profile.profileId);
             loadProfile(profile);
-            Home_Menu(&host, profile);
+            Home_Menu(&host, profile,MAINMENU);//soon
             break;
           }
           else if (buttonTag == 11) // Load (Config Screen)

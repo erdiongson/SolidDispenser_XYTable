@@ -98,8 +98,8 @@ int32_t getLastSavedProfileId();
 bool KeyPassCode(Gpu_Hal_Context_t *phost, Profile &profile, ScreenType screenType);
 
 void Logo_XQ_trans(Gpu_Hal_Context_t *phost);
-void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile);
-void Home_Menu2(Gpu_Hal_Context_t *phost, Profile &profile);//soon
+
+void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile, uint8_t whichmenu);//soon
 void Disp_End(Gpu_Hal_Context_t *phost);
 void renderButtons(Gpu_Hal_Context_t *phost, int Read_sfk, int font);
 void AlphaNumeric(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo, Profile &profile);

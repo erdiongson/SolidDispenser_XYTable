@@ -11,7 +11,7 @@ Date created - 2022.12.14 - XentiQ version
 #define MAX_TUBES_X 13
 #define MAX_TUBES_Y 17
 
-//#define SERIAL_2_DEFAULT  //Comment this out for Serial 3 usage
+#define SERIAL_2_DEFAULT  //Comment this out for Serial 3 usage
 
 enum class ActionState
 {
@@ -53,14 +53,14 @@ void Homing(void);
 
 void runStepper(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg, ActionState actionState);
 
-void runStepper_normal(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg);
+bool runStepper_normal(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg); //soon
 void returnToStart();
 void updateStateMachine(uint8_t buttonTag);
 // void checkAndMoveStepper(AccelStepper &stepper, int steps, int limit, const char *message, ActionState action);
 
 void checkAndMoveStepper_normal(AccelStepper &stepper, int steps, int limit, const char *message);
-void vibrateAndCheckPause();
-void dispenseAndCheckPause();
+bool vibrateAndCheckPause();//soon
+bool dispenseAndCheckPause();//soon
 void Run_profile();
 // void Resume_profile();
 void RunOrResume_profile(bool isResuming);
