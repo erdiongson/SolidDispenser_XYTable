@@ -31,7 +31,7 @@ Revision History:
 #ifndef _Assets_H_
 #define _Assets_H_
 
-#include "Platform.h"
+//#include "Platform.h"
 
 #define RAM_XQ_LOGO 0
 

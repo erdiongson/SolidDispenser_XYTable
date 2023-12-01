@@ -90,29 +90,37 @@ enum ScreenType
     TRAY_SCREEN
 };
 
-uint8_t Read_Keypad();
-uchar8_t istouch();
-uint8_t Gpu_Rom_Font_WH(uint8_t Char, uint8_t font);
 int32_t getLastSavedProfileId();
 
-bool KeyPassCode(Gpu_Hal_Context_t *phost, Profile &profile, ScreenType screenType);
+uint8_t GetKeyPressed(void);
+void WaitKeyRelease(void);
+
 
 void Logo_XQ_trans(Gpu_Hal_Context_t *phost);
 
-void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile, uint8_t whichmenu);//soon
+void Home_Menu(Gpu_Hal_Context_t *, uint8_t );
 void Disp_End(Gpu_Hal_Context_t *phost);
-void renderButtons(Gpu_Hal_Context_t *phost, int Read_sfk, int font);
-void AlphaNumeric(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo, Profile &profile);
-void Print_Profile(Gpu_Hal_Context_t *phost, Profile &profile);
-void Handle_UpDownButtons(Gpu_Hal_Context_t *phost, uint8_t protag, Profile &profile);
-void Profile_Menu(Gpu_Hal_Context_t *phost, Profile &profile);
-void Config_Settings(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo, Profile &profile);
+
+void Keyboard(Gpu_Hal_Context_t *phost, char*,char *,bool);
+void DisplayKeyboard(Gpu_Hal_Context_t *, uint8_t,char *,char *, bool,bool, bool);
+
+void Profile_Menu(Gpu_Hal_Context_t *phost);
+void Config_Settings(Gpu_Hal_Context_t *phost);
+void DisplayConfig(Gpu_Hal_Context_t *);
+
 void confirmAdvanceSetting(Gpu_Hal_Context_t *phost);
-void Keyboard(Gpu_Hal_Context_t *phost, Profile &profile, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo);
+float Keypad(Gpu_Hal_Context_t *, float, float, float, bool);
 void displayTextMatrixName();
 void toggleButton(Gpu_Hal_Context_t *phost, Profile &profile, int tag, int x, int y, int buttonSize, int row, int col, int i, int j);
 void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile);
 
-void offsetStepperPosition(Profile &profile);
+uint8_t offsetStepperPosition(void);
+void Dprint(char );
+void Dprint(String);
+void Dprint(String,String);
+void Dprint(String , uint8_t );
+void Dprint(String , float );
+
+
 
 #endif /* _APP_COMMON_H_ */

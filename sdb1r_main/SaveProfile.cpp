@@ -5,6 +5,7 @@ Date created - 2022.12.14 - XentiQ version
 #include "SaveProfile.h"
 #include <EEPROM.h>
 #include "Platform.h"
+#include "app_common.h"
 
 #define SINGLE_PROFILE
 
@@ -28,335 +29,129 @@ bool checkPasscode(Gpu_Hal_Context_t *phost, const char *enteredPasscode, const 
         return false;
     }
 }
-
-#ifdef SINGLE_PROFILE
-bool loadProfile(Profile &profile)
+void BlankEEPROM(void)
 {
-    EEPROM.get(PROFILE_START_ADDR, profile);
-    
-    // Ensure profileName is null-terminated after loading from EEPROM
-    profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
-    
-    profile.profileId = 1; // This can be fixed since we have only one profile now
+	int i;
 
-	//soon B
-	if(profile.Tube_No_x==0 && profile.Tube_No_y == 0)
+	for(i=0;i<4096;i++) EEPROM.put(i,0);
+}
+
+void PreLoadEEPROM(void)
+{
+	uint8_t i,x,y;
+	char buf[20];
+	Profile tempprof;
+
+	for(i=0;i<MAX_PROFILES;i++)
 	{
-		profile.trayOriginX=0;
-		profile.trayOriginY=0;
-		profile.Tube_No_x=2;
-		profile.Tube_No_y=2;
-		profile.pitch_x=10;
-		profile.pitch_y=10;
-		profile.Cycles=2;
+		sprintf(buf,"profile %d",i+1);
+		strcpy(tempprof.profileName,buf);
+
+		if(i==0)
+		{
+			tempprof.Tube_No_x=2;
+			tempprof.Tube_No_y=2;
+			tempprof.pitch_x=10;
+			tempprof.pitch_y=10;
+			tempprof.trayOriginX=10;
+			tempprof.trayOriginY=10;
+			tempprof.Cycles=2;
+			tempprof.vibrationEnabled=TRUE;
+			for(x=0;x<MAX_BUTTONS_X;x++)
+				for(y=0;y<MAX_BUTTONS_Y;y++) tempprof.buttonStates[x][y]=TRUE;
+		}
+		else
+		{
+			tempprof.Tube_No_x=MAX_BUTTONS_X;
+			tempprof.Tube_No_y=MAX_BUTTONS_Y;
+			tempprof.pitch_x=10;
+			tempprof.pitch_y=10;
+			tempprof.trayOriginX=10;
+			tempprof.trayOriginY=10;
+			tempprof.Cycles=2;
+			tempprof.vibrationEnabled=TRUE;
+			for(x=0;x<MAX_BUTTONS_X;x++)
+				for(y=0;y<MAX_BUTTONS_Y;y++) tempprof.buttonStates[x][y]=TRUE;
+		}
+		WriteProfileEEPROM(i,tempprof);
 	}
-	//soon E
-    return true;
+	WriteCurIDEEPROM(0);//reset current profile in eeprom to 0
 }
 
-void saveProfile(Profile &profile)
+void CheckProfile(Profile &source)
 {
-    // Ensure profileName is null-terminated
-    profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
-    
-    // Save the profile to the EEPROM
-    EEPROM.put(PROFILE_START_ADDR, profile);
-    
-    // The following lines are not required for a single profile:
-    // profileId = 0; 
-    // EEPROM.update(0, profileId + 1); // Increment the profileId before updating it in EEPROM
+	if(source.Cycles>MAXCYCLE) source.Cycles=MAXCYCLE;
+	if(source.Cycles<0) source.Cycles=0;
+	if(source.pitch_x>MAXPITCHX) source.pitch_x=MAXPITCHX;
+	if(source.pitch_x<0) source.pitch_x=0;
+	if(source.pitch_y>MAXPITCHY) source.pitch_y=MAXPITCHY;
+	if(source.pitch_y<0) source.pitch_y=0;
+	if(source.trayOriginX>MAXORGX) source.trayOriginX=MAXORGX;
+	if(source.trayOriginX<0) source.trayOriginX=0;
+	if(source.trayOriginY>MAXORGY) source.trayOriginY=MAXORGY;
+	if(source.trayOriginY<0) source.trayOriginY=0;
+	if(source.Tube_No_x>MAX_TUBES_X) source.Tube_No_x=MAX_TUBES_X;
+	if(source.Tube_No_x<0) source.Tube_No_x=0;
+	if(source.Tube_No_y>MAX_TUBES_Y) source.Tube_No_y=MAX_TUBES_Y;
+	if(source.Tube_No_y<0) source.Tube_No_y=0;
+
 }
-
-#endif
-
-#ifndef SINGLE_PROFILE
-
-bool loadProfile(Profile &profile, int32_t profileId)
+uint8_t LoadProfile(void)
 {
-    // Serial.print("Loading profile at profileId ");
-    // Serial.println(profileId);
+	uint8_t ret=0;
 
-    if (profileId >= 0 && profileId < NUM_PROFILES)
-    {
-        EEPROM.get(PROFILE_START_ADDR + profileId * sizeof(Profile), profile);
-        // Ensure profileName is null-terminated after loading from EEPROM
-        profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
-
-        profile.profileId = profileId; // Set the correct profileId after loading the profile
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void saveProfile(Profile &profile, int32_t profileId) // pass-by-reference could be more effcieint in memeory handling then pass-by-value(without&)
-{
-    // Ensure profileName is null-terminated
-    profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
-
-    // Set other parameters for the profile as needed
-    EEPROM.put(PROFILE_START_ADDR + profileId * sizeof(Profile), profile);
-
-    // Reset profileId to 0 if it is equal to or more than NUM_PROFILES
-    if (profileId >= NUM_PROFILES)
-    {
-        profileId = 0;
-    }
-    // Serial.print("Saving profile with ID ");
-    // Serial.println(profileId);
-
-    // Update the last used profileId in EEPROM
-    EEPROM.update(0, profileId + 1); // Increment the profileId before updating it in EEPROM
-}
-
-//bool loadProfile(Profile &profile, int32_t profileId) {
-//    if (profileId < 0 || profileId >= NUM_PROFILES) {
-//        return false;  // Invalid profileId
-//    }
-//
-//    EEPROM.get(getProfileAddress(profileId), profile);
-//    
-//    // Ensure profileName is null-terminated after loading from EEPROM
-//    profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
-//    
-//    profile.profileId = profileId;
-//    return true;
-//}
-//
-//void saveProfile(Profile &profile, int32_t profileId) {
-//    if (profileId < 0 || profileId >= NUM_PROFILES) {
-//        return;  // Invalid profileId
-//    }
-//
-//    // Ensure profileName is null-terminated
-//    profile.profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
-//    
-//    // Save the profile to the EEPROM
-//    EEPROM.put(getProfileAddress(profileId), profile);
-//}
-
-#endif
-
-void initializeProfile(Profile &profile)
-{
-    // Initialize the button states to false
-    for (int32_t i = 0; i < profile.Tube_No_y; i++)
-    {
-        for (int32_t j = 0; j < profile.Tube_No_x; j++)
-        {
-            profile.buttonStates[i][j] = false;
-        }
-    }
+	ret=ReadCurIDEEPROM();
+	if(ret>=MAX_PROFILES)  ret=0;// if corrcupt data from eeprom, set id=0
+	
+	ReadProfileEEPROM(ret,CurProf);//reread as it is not profile id 0
+	if(CurProf.Cycles>MAXCYCLE) CurProf.Cycles=MAXCYCLE;
+	if(CurProf.pitch_x>MAXPITCHX) CurProf.pitch_x=MAXPITCHX;
+	if(CurProf.pitch_y>MAXPITCHY) CurProf.pitch_y=MAXPITCHY;
+	if(CurProf.trayOriginX>MAXORGX) CurProf.trayOriginX=MAXORGX;
+	if(CurProf.trayOriginY>MAXORGY) CurProf.trayOriginY=MAXORGY;
+	if(CurProf.Tube_No_x>MAX_TUBES_X) CurProf.Tube_No_x=MAX_TUBES_X;
+	if(CurProf.Tube_No_y>MAX_TUBES_Y) CurProf.Tube_No_y=MAX_TUBES_Y;
+	return ret;
 }
 
 
-uint8_t getLastUsedProfileId()
+void WritePassEEPROM(char *pass)
 {
-    uint8_t lastProfileId = EEPROM.read(0);
-    if (lastProfileId == 0)
-    {
-        // EEPROM is uninitialized, return a default profile ID (e.g., 1)
-        return 0;
-    }
-    return lastProfileId;
+	EEPROM.put(4000, *pass);
 }
 
-void getLastUsedProfileNames(char *profileName)
+void ReadPassEEPROM(char *pass)
 {
-    uint8_t lastProfileId = EEPROM.read(0);
-    if (lastProfileId == 0)
-    {
-        // EEPROM is uninitialized, return a default profile Name
-        strcpy(profileName, "Default");
-        return;
-    }
-    uint16_t eepromAddress = (lastProfileId - 1) * PROFILE_NAME_MAX_LEN; // calculate the address in EEPROM
-    for (uint8_t i = 0; i < PROFILE_NAME_MAX_LEN; i++)
-    {
-        char readChar = EEPROM.read(eepromAddress + i);
-        profileName[i] = readChar;
-        if (readChar == '\0')
-        {
-            // If we encounter a null character, we can stop reading.
-            break;
-        }
-    }
-    // Ensure the profileName is null-terminated.
-    profileName[PROFILE_NAME_MAX_LEN - 1] = '\0';
+    EEPROM.get(4000, *pass);
+
 }
 
-
-//Print multiple profile
-//void printProfiles(Profile &profile) // profile is passed by reference
-//{
-//    Serial.println("Printing profiles...");
-//    for (int i = 0; i < NUM_PROFILES; i++)
-//    {
-//        if (loadProfile(profile, i)) // assuming loadProfile function correctly loads the profile at index i into the passed profile
-//        {
-//            Serial.print("profileName: ");
-//            Serial.println(profile.profileName);
-//            Serial.print("Profile ID: ");
-//            Serial.println(profile.profileId);
-//            Serial.print("Number of X tubes: ");
-//            Serial.println(profile.Tube_No_x);
-//            Serial.print("Number of Y tubes: ");
-//            Serial.println(profile.Tube_No_y);
-//            Serial.print("Tube pitch x: ");
-//            Serial.println(profile.pitch_x);
-//            Serial.print("Tube pitch y: ");
-//            Serial.println(profile.pitch_y);
-//            Serial.print("Tray origin X: ");
-//            Serial.println(profile.trayOriginX);
-//            Serial.print("Tray origin Y: ");
-//            Serial.println(profile.trayOriginY);
-//            Serial.print("Number of cycles: ");
-//            Serial.println(profile.Cycles);
-//            Serial.print("Vibration enabled: ");
-//            Serial.println(profile.vibrationEnabled ? "true" : "false");
-//            Serial.print("Dispenser enabled: ");
-//            Serial.println(profile.dispenseEnabled ? "true" : "false");
-//            Serial.println("Button states:");
-//
-//            for (int j = 0; j < profile.Tube_No_y; j++) // iterate over rows
-//            {
-//                for (int k = 0; k < profile.Tube_No_x; k++) // iterate over columns
-//                {
-//                    Serial.print(profile.buttonStates[j][k] ? "OFF " : "ON ");
-//                }
-//                Serial.println(); // newline for each row
-//            }
-//        }
-//    }
-//}
-
-// Print Single Profile
-void printProfiles(Profile &profile) 
+void WriteCurIDEEPROM(uint8_t curprofid)
 {
-    Serial.println("Printing profile...");
-
-    // No need for a loop since we have just one profile
-    loadProfile(profile);  // Assuming loadProfile has been modified as per the previous answer
-//    loadProfile(profile, profile.profileId);
-
-    Serial.print("profileName: ");
-    Serial.println(profile.profileName);
-    Serial.print("Profile ID: ");
-    Serial.println(profile.profileId);
-    Serial.print("Number of X tubes: ");
-    Serial.println(profile.Tube_No_x);
-    Serial.print("Number of Y tubes: ");
-    Serial.println(profile.Tube_No_y);
-    Serial.print("Tube pitch x: ");
-    Serial.println(profile.pitch_x);
-    Serial.print("Tube pitch y: ");
-    Serial.println(profile.pitch_y);
-    Serial.print("Tray origin X: ");
-    Serial.println(profile.trayOriginX);
-    Serial.print("Tray origin Y: ");
-    Serial.println(profile.trayOriginY);
-    Serial.print("Number of cycles: ");
-    Serial.println(profile.Cycles);
-    Serial.print("Vibration enabled: ");
-    Serial.println(profile.vibrationEnabled ? "true" : "false");
-    Serial.print("Dispenser enabled: ");
-    Serial.println(profile.dispenseEnabled ? "true" : "false");
-    Serial.println("Button states:");
-
-    for (int j = 0; j < profile.Tube_No_y; j++) // iterate over rows
-    {
-        for (int k = 0; k < profile.Tube_No_x; k++) // iterate over columns
-        {
-            Serial.print(profile.buttonStates[j][k] ? "OFF " : "ON ");
-        }
-        Serial.println(); // newline for each row
-    }
+	EEPROM.put(0, curprofid);
 }
 
-void getProfileName(int index, char *buffer, size_t bufferSize)
+uint8_t ReadCurIDEEPROM(void)
 {
-    Profile tempProfile;
-    int addr = index * sizeof(Profile);
-    EEPROM.get(addr, tempProfile);
-    strncpy(buffer, tempProfile.profileName, bufferSize);
+	uint8_t temp;
+
+	EEPROM.get(0, temp);
+	if(temp>MAX_PROFILES) temp=0;
+	return temp;
 }
 
-void getLastProfileAndCopy()
+void WriteProfileEEPROM(int address, Profile &profile)
 {
-    const char *lastProfileName = getLastUsedProfileName();
-    // Create a buffer to hold the copied string
-    char copiedProfileName[PROFILE_NAME_MAX_LEN + 1];
-    // Copy the profile name
-    copyProfileName(copiedProfileName, lastProfileName, PROFILE_NAME_MAX_LEN + 1);
-}
-
-void copyProfileName(char *dest, const char *src, size_t maxSize)
-{
-    // Copy the string
-    strncpy(dest, src, maxSize - 1);
-    // Null-terminate the string
-    dest[maxSize - 1] = '\0';
-}
-
-const char *getLastUsedProfileName()
-{
-    static char profileName[PROFILE_NAME_MAX_LEN]; // define static variable, MAX_PROFILE_NAME_LENGTH should be defined as maximum possible length of profile name.
-
-    uint8_t lastProfileId = EEPROM.read(0);
-    if (lastProfileId == 0)
-    {
-        // EEPROM is uninitialized, return a default profile name
-        strncpy(profileName, "Default Name", PROFILE_NAME_MAX_LEN - 1);
-        profileName[PROFILE_NAME_MAX_LEN - 1] = '\0'; // Ensure null-termination
-        return profileName;
-    }
-    lastProfileId -= 1;
-
-    Profile profile;
-    EEPROM.get(PROFILE_START_ADDR + lastProfileId * sizeof(Profile), profile);
-
-    // Copy the name of the profile to the static variable
-    strncpy(profileName, profile.profileName, PROFILE_NAME_MAX_LEN - 1);
-    profileName[PROFILE_NAME_MAX_LEN - 1] = '\0'; // Ensure null-termination
-
-    // Return the static variable
-    return profileName;
-}
-
-bool getProfileByIndex(Profile &profile, int32_t index)
-{
-    Serial.print("Getting profile at index ");
-    Serial.println(index);
-
-    if (index >= 0 && index < NUM_PROFILES)
-    {
-        EEPROM.get(PROFILE_START_ADDR + index * sizeof(Profile), profile);
-        profile.profileId = index; // Set the correct profileId after loading the profile
-        return true;
-    }
-    else
-    {
-        return false;
-    }
-}
-
-void cleanupProfile(Profile &profile)
-{
-    for (int i = 0; i < profile.Tube_No_y; i++)
-    {
-        delete[] profile.buttonStates[i];
-    }
-    delete[] profile.buttonStates;
-}
-
-void WriteProfileToEEPROM(int address, Profile &profile)
-{
+	int x,y;
+	byte dat;
+	int bit;
+	
+	address=(address*sizeof(profile))+sizeof(uint8_t);
+	
+    //EEPROM.put(address, profile.profileId);
+    //address += sizeof(profile.profileId);
     EEPROM.put(address, profile.profileName);
     address += sizeof(profile.profileName);
-    EEPROM.put(address, profile.profileId);
-    address += sizeof(profile.profileId);
     EEPROM.put(address, profile.Tube_No_x);
     address += sizeof(profile.Tube_No_x);
     EEPROM.put(address, profile.Tube_No_y);
@@ -374,30 +169,45 @@ void WriteProfileToEEPROM(int address, Profile &profile)
     EEPROM.put(address, profile.vibrationEnabled);
     address += sizeof(profile.vibrationEnabled);
     EEPROM.put(address, profile.dispenseEnabled);
-    address += sizeof(profile.dispenseEnabled);
+	address += sizeof(profile.dispenseEnabled);
+	//Dsprintln("size");
+	//Dprintln(sizeof(profile));
 
-    for (int i = 0; i < profile.Tube_No_y; i++)
-    {
-        for (int j = 0; j < profile.Tube_No_x; j += 8)
-        {
-            byte b = 0;
-            for (int bit = 0; bit < 8 && (j + bit) < MAX_BUTTONS_X; ++bit)
+
+	for (y = 0; y < MAX_BUTTONS_Y; y++)
+	{
+		for (x = 0; x < MAX_BUTTONS_X; x += 8)
+		{
+		    dat = 0;
+            for (bit = 0; bit < 8 && (x + bit) < MAX_BUTTONS_X; ++bit)
             {
-                if (profile.buttonStates[i][j + bit])
-                    b |= (1 << bit);
+                if (profile.buttonStates[x+ bit][y])
+                    dat |= (1 << bit);
             }
-            EEPROM.put(address, b);
-            address += sizeof(b);
-        }
-    }
+
+			EEPROM.put(address, dat);
+			address += sizeof(dat);
+		}
+	}
+
 }
 
-void ReadProfileFromEEPROM(int address, Profile &profile)
+void ReadProfileEEPROM(int address, Profile &profile)
 {
+	int x,y;
+	byte dat;
+	int bit;
+	Dprint("profile size=", (float)sizeof(profile));
+	address=(address*sizeof(profile))+ sizeof(uint8_t);
+
+    //EEPROM.get(address, profile.profileId);
+    //address += sizeof(profile.profileId);
     EEPROM.get(address, profile.profileName);
+	Dprint(profile.profileName);
     address += sizeof(profile.profileName);
-    EEPROM.get(address, profile.profileId);
-    address += sizeof(profile.profileId);
+
+#if 1
+
     EEPROM.get(address, profile.Tube_No_x);
     address += sizeof(profile.Tube_No_x);
     EEPROM.get(address, profile.Tube_No_y);
@@ -416,18 +226,23 @@ void ReadProfileFromEEPROM(int address, Profile &profile)
     address += sizeof(profile.vibrationEnabled);
     EEPROM.get(address, profile.dispenseEnabled);
     address += sizeof(profile.dispenseEnabled);
+#endif
 
-    for (int i = 0; i < MAX_BUTTONS_Y; i++)
+    for (y = 0; y < MAX_BUTTONS_Y; y++)
     {
-        for (int j = 0; j < MAX_BUTTONS_X; j += 8)
+        for (x = 0; x < MAX_BUTTONS_X; x += 8)
         {
-            byte b;
-            EEPROM.get(address, b);
-            address += sizeof(b);
-            for (int bit = 0; bit < 8 && (j + bit) < MAX_BUTTONS_X; ++bit)
+           	EEPROM.get(address, dat);
+           	address += sizeof(dat);
+
+            for (bit = 0; bit < 8 && (x + bit) < MAX_BUTTONS_X; ++bit)
             {
-                profile.buttonStates[i][j + bit] = (b & (1 << bit));
+				//dat = 0;
+                profile.buttonStates[x+ bit][y]= dat & (1 << bit);			
             }
-        }
-    }
+		}
+	}
+
+  	CheckProfile(profile);
+
 }
