@@ -303,7 +303,7 @@ void startProcess()
     for (y =  0; y < CurProf.Tube_No_y; y++)
     {
 
-		temp=runStepper_normal(stepper_y, CurProf.pitch_y * STEPS_PER_UNIT_Y, Limit_S_y_MAX);
+		if (y!=0) temp=runStepper_normal(stepper_y, CurProf.pitch_y * STEPS_PER_UNIT_Y, Limit_S_y_MAX);
 		CurY=y;
      	Home_Menu(&host, RUNMENU);
 		if(temp!=0) 
