@@ -881,7 +881,7 @@
 #define RESTORE_CONTEXT() ((35UL<<24))
 #define RETURN() ((36UL<<24))
 #define MACRO(m) ((37UL<<24)|(((m)&1UL)<<0))
-#define DISPLAY() ((0UL<<24))
+//#define DISPLAY() ((0UL<<24))
 
 #elif defined (FT81X_ENABLE)
 
@@ -1217,7 +1217,7 @@
 #define RESTORE_CONTEXT() ((35UL<<24))
 #define RETURN() ((36UL<<24))
 #define MACRO(m) ((37UL<<24)|(((m)&1UL)<<0))
-#define DISPLAY() ((0UL<<24))
+//#define DISPLAY() ((0UL<<24))
 
 #else
   #error "Please choose generation of Embedded Video Engine (EVE_1, EVE_2, EVE_3) in modules.h file"

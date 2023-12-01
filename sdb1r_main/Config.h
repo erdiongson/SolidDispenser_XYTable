@@ -16,15 +16,15 @@
 #define Motor_y_CW 29
 #define Motor_y_CLK 31
 
-#define motor_x_speed 16000 // 8000, 2000
-#define motor_y_speed 8000  // 4800, 1000
+//#define motor_x_speed 8000//, 2000
+//#define motor_y_speed 4800//, 1000
 
-#define motor_x_Acceleration 8000 // 4800, 3200
-#define motor_y_Acceleration 4000 // 2400 1600 // 3200
+//#define motor_x_Acceleration 8000 // 4800, 3200
+//#define motor_y_Acceleration 4000 // 2400 1600 // 3200
 
-int32_t operating = 0;
-int32_t count = 0;
-int32_t parameter = 0;
-int touchx, touchy, touchz = 0;
-int stCurrent[4] = {};
-int32_t stCurrentLen = 0;
+#define motor_x_speed 8000 // 8000, 2000
+#define motor_y_speed 80000  // 4800, 1000
+
+#define motor_x_Acceleration 100000//8000 // 4800, 3200
+#define motor_y_Acceleration 100000//4000 // 2400 1600 // 3200
+

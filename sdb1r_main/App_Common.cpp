@@ -50,25 +50,12 @@ uint32_t CmdBuffer_Index;
 volatile uint32_t DlBuffer_Index;
 volatile uint16_t toggleState;
 
-int32_t tempvarnum;
-int32_t tempvarx;
-int32_t tempvary;
-int32_t tempvarx_inc;
-int32_t tempvary_inc;
-int32_t cycle_var;
-int32_t PageNum;
-uint16_t But_opt;
 uint8_t font = 27;
-int32_t Read_sfk = 0;
-uint16_t back_flag = 0;
 uint8_t Line = 0;
 uint16_t line2disp = 0;
 
-int tube_state = 0;
-uint8_t buttonTag = 255;
-const int STARTPOS = 255; // GUI screen coordinates
-int32_t startRow = 1;
-int32_t startCol = 1;
+const int STARTPOS = 270; // GUI screen coordinates
+
 
 inline int32_t minimum(int32_t a, int32_t b) { return a < b ? a : b; }
 
@@ -80,11 +67,11 @@ struct
     uint8_t Exit : 1;
 } Flag;
 
-struct Notepad_buffer
-{
-    char8_t *temp;
-    char8_t notepad[MAX_LINES + 1][800];
-} Buffer;
+//struct Notepad_buffer
+//{
+//    char8_t *temp;
+//    char8_t notepad[MAX_LINES + 1][800];
+//} Buffer;
 
 #ifdef BUFFER_OPTIMIZATION
 uint8_t DlBuffer[DL_SIZE];
@@ -403,66 +390,67 @@ void Logo_XQ_trans(Gpu_Hal_Context_t *phost)
     Gpu_Hal_Sleep(800);
 }
 
-//soon B
-void Activate_But(uint8_t whichmenu, uint8_t but)
+
+void SetMainMenuButton(uint8_t whichmenu)
 {
-	//					 	 NONE NONE SETTING START PAUSE STOP
-	bool_t act_but[][6] = {	{1,		1,	1		,1		,0	,0}, //main menu
-							{1,		1,	0		,0		,1	,1},//running menu
-							{1,		1,	0		,1		,0	,1}, //pause menu
+	//					 	 SETTING START PAUSE STOP
+	bool_t act_but[][6] = {	{1		,1		,0	,0}, //main menu
+							{0		,0		,1	,1},//running menu
+							{0		,1		,0	,1}, //pause menu
+							{0		,0		,0	,1}, //error1 menu
+							{0		,0		,0	,1}, //error2 menu
 						};
+	int i;
+	char but[4]={SETTING,START,PAUSE,STOP};
 
-	App_WrCoCmd_Buffer(phost, TAG(but));
-
-	if(act_but[whichmenu][but]) 
+	for (i=0;i<4;i++)
 	{
-		App_WrCoCmd_Buffer(phost, COLOR_A(255));//soon
-		App_WrCoCmd_Buffer(phost, TAG_MASK(1));//soon
-	}
-	else
-	{
-		App_WrCoCmd_Buffer(phost, COLOR_A(60));//soon
-		App_WrCoCmd_Buffer(phost, TAG_MASK(0));//soon
-	}
+		App_WrCoCmd_Buffer(phost, TAG(but[i]));
 
+		if(act_but[whichmenu][i]) 
+		{
+			App_WrCoCmd_Buffer(phost, COLOR_A(255));
+			App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+		}
+		else
+		{
+			App_WrCoCmd_Buffer(phost, COLOR_A(60));
+			App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+		}
 
-
-	switch(but)
-	{
-		case START:		Gpu_CoCmd_FgColor(phost, 0x006400);
-						if(whichmenu==PAUSEMENU)
-						    Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "RESUME");
-						else
-						    Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "START");
-						break;
-		case PAUSE:		Gpu_CoCmd_FgColor(phost, 0xADAF3C);
-					    Gpu_CoCmd_Button(phost, 207, 112, 90, 36, 28, 0, "PAUSE");
-						break;
-		case STOP:	    Gpu_CoCmd_FgColor(phost, 0xAA0000);
-					    Gpu_CoCmd_Button(phost, 25, 157, 273, 36, 28, 0, "STOP");
-						break;
-		case SETTING:   Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-					    Gpu_CoCmd_Button(phost, 208, 5, 90, 36, 28, OPT_FORMAT, "Settings");
+		switch(but[i])
+		{
+			case START:		Gpu_CoCmd_FgColor(phost, 0x006400);
+							if(whichmenu==PAUSEMENU)
+							    Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "RESUME");
+							else
+							    Gpu_CoCmd_Button(phost, 25, 112, 90, 36, 28, 0, "START");
+							break;
+			case PAUSE:		Gpu_CoCmd_FgColor(phost, 0xADAF3C);
+						    Gpu_CoCmd_Button(phost, 207, 112, 90, 36, 28, 0, "PAUSE");
+							break;
+			case STOP:	    Gpu_CoCmd_FgColor(phost, 0xAA0000);
+							if(whichmenu==TXRXERROR)
+							{
+								Gpu_CoCmd_Button(phost, 25, 157, 273, 36, 28, 0, "Communication error");
+							} else if(whichmenu==HOMEERROR)
+								{
+								    Gpu_CoCmd_Button(phost, 25, 157, 273, 36, 28, 0, "Home error");
+								}
+								else Gpu_CoCmd_Button(phost, 25, 157, 273, 36, 28, 0, "STOP");
+							break;
+			case SETTING:   Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+						    Gpu_CoCmd_Button(phost, 208, 5, 90, 36, 28, OPT_FORMAT, "Settings");
+		}
+		App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 	}
-	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 }
 
-void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile, uint8_t whichmenu)
+void Home_Menu(Gpu_Hal_Context_t *phost, uint8_t whichmenu )
 {
-    operating = 1;
-    parameter = 0;
-    count = 0;
-    stCurrentLen = 0;
-    memset(stCurrent, 0, sizeof(stCurrent));
-    PageNum = 0;
-	
 
-    uint16_t But_opt1;
-    uint16_t Read_sfk = 0;
-
-    int32_t filling_tube = 0;
-
-    Read_sfk = Read_Keypad();
+	int32_t filling_tube = 0;
+	char buf[100];  
 
     Gpu_CoCmd_FlashFast(phost, 0);
     Gpu_CoCmd_Dlstart(phost);
@@ -472,11 +460,8 @@ void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile, uint8_t whichmenu)
     App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
     App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
     Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-    App_WrCoCmd_Buffer(phost, TAG(2));
-	Activate_But(whichmenu, SETTING); //soon
-	
 
-    Gpu_CoCmd_Button(phost, 208, 5, 90, 36, 28, OPT_FORMAT, "Settings");
+	
     App_WrCoCmd_Buffer(phost, TAG_MASK(0));
     App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
     App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0));
@@ -495,22 +480,26 @@ void Home_Menu(Gpu_Hal_Context_t *phost, Profile &profile, uint8_t whichmenu)
     App_WrCoCmd_Buffer(phost, TAG_MASK(255));
 
 
-	Activate_But(whichmenu, START); //soon
-	Activate_But(whichmenu, PAUSE); //soon
-	Activate_But(whichmenu, STOP); //soon
+	SetMainMenuButton(whichmenu); 
+	
+	sprintf(buf,"Profile Name: %s", CurProf.profileName);
+    Gpu_CoCmd_Text(phost, 25, 195, 20,   OPT_FORMAT, buf);//OPT_CENTER | OPT_RIGHTX |
+    sprintf(buf, "No. of Cycles: %d", CurProf.Cycles);
+    Gpu_CoCmd_Text(phost, 25, 208, 20,   OPT_FORMAT, buf);
 
-    Gpu_CoCmd_Text(phost, 52, 201, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Profile ID: %d", profile.profileId);
-    Gpu_CoCmd_Text(phost, 62, 214, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "No. of Cycles: %d", profile.Cycles);
+    filling_tube = CurProf.Tube_No_x * CurProf.Tube_No_y;
 
-    filling_tube = profile.Tube_No_x * profile.Tube_No_y;
+	sprintf(buf,"Filling tube: %d", filling_tube);
+    Gpu_CoCmd_Text(phost, 25, 220, 20,  OPT_FORMAT, buf);
 
-    Gpu_CoCmd_Text(phost, 60, 228, 20, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Filling tube: %d", filling_tube);
+	sprintf(buf,"Current Tube : R%2d C%2d",CurY+1,CurX+1);
+	Gpu_CoCmd_Text(phost, 292, 208, 20,   OPT_RIGHTX | OPT_FORMAT, buf);
 
+	sprintf(buf,"Tube left : %3d",TotalTubeLeft);
+	Gpu_CoCmd_Text(phost, 294, 220, 20,   OPT_RIGHTX | OPT_FORMAT, buf);
 
     Disp_End(phost);
 }
-
-//soon E
 
 
 void Disp_End(Gpu_Hal_Context_t *phost)
@@ -529,693 +518,435 @@ void Disp_End(Gpu_Hal_Context_t *phost)
     // Gpu_Hal_WaitCmdfifo_empty(phost);
 }
 
-void renderButtons(Gpu_Hal_Context_t *phost, int Read_sfk, int font)
+void DisplayKeyboard(Gpu_Hal_Context_t *phost, uint8_t keypressed,char *displaytext,char *displaytitle, bool numlock,bool caplock, bool errorcode)
 {
-    uint32_t But_opt;
+	char buf[PROFILE_NAME_MAX_LEN+8];
 
-    But_opt = (Read_sfk == BACK) ? OPT_FLAT : 0; // button color change if the button during press
-    App_WrCoCmd_Buffer(phost, TAG(BACK));        // Back		 Return to Home
-    Gpu_CoCmd_Button(phost, 207, 112, 67, 50, font, But_opt, "Back");
+	// Display List start
+	Gpu_CoCmd_Dlstart(phost);
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(120, 120, 120));
+	App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1)); // enable tagbuffer updation
 
-    But_opt = (Read_sfk == BACK_SPACE) ? OPT_FLAT : 0;
-    App_WrCoCmd_Buffer(phost, TAG(BACK_SPACE)); // BackSpace
-    Gpu_CoCmd_Button(phost, 207, 181, 67, 50, font, But_opt, "Del");
+	Gpu_CoCmd_FgColor(phost, 0x703800);
+	Gpu_CoCmd_BgColor(phost, 0x703800);
+	
+	Gpu_CoCmd_FgColor(phost, 0xAA0000);
 
-    But_opt = (Read_sfk == NUMBER_LOCK) ? OPT_FLAT : 0;
-    App_WrCoCmd_Buffer(phost, TAG(253)); // Enter
-    Gpu_CoCmd_Button(phost, 207, 36, 67, 50, font, But_opt, "Enter");
-}
+	App_WrCoCmd_Buffer(phost, TAG(CLEAR_KEY));		 // Back		 Return to Home
+	Gpu_CoCmd_Button(phost, (DispWidth * 0.855), (DispHeight * 0.83), (DispWidth * 0.146), (DispHeight * 0.112),
+					 font, (keypressed==CLEAR_KEY)? OPT_FLAT : 0, "Clear");
+	Gpu_CoCmd_FgColor(phost, 0x703800);
 
-bool KeyPassCode(Gpu_Hal_Context_t *phost, Profile &profile, ScreenType screenType)
-{
-    PageNum = 3;
-    phost = &host;
-    /*local variables*/
-    uint8_t Line = 0;
-    uint16_t Disp_pos = 0;
-    int32_t Read_sfk = 0, tval;
-    uint16_t noofchars = 0, line2disp = 0, nextline = 0;
 
-    // Clear Linebuffer
-    for (tval = 0; tval < MAX_LINES; tval++)
-        memset(&Buffer.notepad[tval], '\0', sizeof(Buffer.notepad[tval]));
+	Gpu_CoCmd_FgColor(phost, 0xADAF3C);
+	App_WrCoCmd_Buffer(phost, TAG(BACK_SPACE)); // BackSpace
+	Gpu_CoCmd_Button(phost, (DispWidth * 0.875), (DispHeight * 0.70), (DispWidth * 0.125),
+					 (DispHeight * 0.112), font, (keypressed==BACK_SPACE)? OPT_FLAT : 0, "<-");
+	Gpu_CoCmd_FgColor(phost, 0x703800);
 
-    /*intial setup*/
-    Line = 0;                                                   // Starting line
-    Disp_pos = LINE_STARTPOS;                                   // starting pos
-    Flag.Numeric = ON;                                          // Disable the numbers and spcial charaters
-    memset((Buffer.notepad[Line] + 0), '_', 1);                 // For Cursor
-    Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][0], Font); // Update the Disp_Pos
-    noofchars += 1;                                             // for cursor
-                                                                /*enter*/
-    Flag.Exit = 0;
 
-    do
+
+	Gpu_CoCmd_FgColor(phost, 0x00a2e8);
+    App_WrCoCmd_Buffer(phost, TAG(KBBACK)); // Back		 Return to Home
+    Gpu_CoCmd_Button(phost, (DispWidth * 0.115), (DispHeight * 0.83), (DispWidth * 0.192), (DispHeight * 0.112),
+                     font, (keypressed==KBBACK)? OPT_FLAT : 0, "Back");
+	
+	Gpu_CoCmd_FgColor(phost, 0x202020);//0x703800);
+	App_WrCoCmd_Buffer(phost, TAG(' ')); // Space
+	Gpu_CoCmd_Button(phost, (DispWidth * 0.315), (DispHeight * 0.83), (DispWidth * 0.33), (DispHeight * 0.112),
+					 font, (keypressed==' ')? OPT_FLAT : 0, "Space");
+
+    if (!numlock)
     {
-        Read_sfk = Read_Keypad(); // read the keys
+        Gpu_CoCmd_Keys(phost, 0, (DispHeight * 0.442), DispWidth, (DispHeight * 0.112), font, keypressed,
+                       ((caplock) ? "QWERTYUIOP" : "qwertyuiop"));
+        Gpu_CoCmd_Keys(phost, (DispWidth * 0.042), (DispHeight * 0.57), (DispWidth * 0.96), (DispHeight * 0.112),
+                       font, keypressed, ((caplock) ? "ASDFGHJKL" : "asdfghjkl"));
+        Gpu_CoCmd_Keys(phost, (DispWidth * 0.125), (DispHeight * 0.70), (DispWidth * 0.73), (DispHeight * 0.112),
+                       font, keypressed, ((caplock) ? "ZXCVBNM" : "zxcvbnm"));
 
-        if (Flag.Key_Detect)
-        {                        // check if key is pressed
-            Flag.Key_Detect = 0; // clear it
-            if (Read_sfk >= SPECIAL_FUN)
-            { // check any special function keys are pressed
-                switch (Read_sfk)
-                {
-                case BACK_SPACE:
-                    if (noofchars > 1) // check in the line there is any characters are present,cursor not include
-                    {
-                        noofchars -= 1;                                                             // clear the character inthe buffer
-                        Disp_pos -= Gpu_Rom_Font_WH(*(Buffer.notepad[Line] + noofchars - 1), Font); // Update the Disp_Pos
-                    }
-                    else
-                    {
-                        if (Line >= (MAX_LINES - 1))
-                            Line--;
-                        else
-                            Line = 0;                                                      // check the lines
-                        noofchars = strlen(Buffer.notepad[Line]);                          // Read the len of the line
-                        for (tval = 0; tval < noofchars; tval++)                           // Compute the length of the Line
-                            Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][tval], Font); // Update the Disp_Pos
-                    }
-                    Buffer.temp = (Buffer.notepad[Line] + noofchars); // load into temporary buffer
-                    Buffer.temp[-1] = '_';                            // update the string
-                    Buffer.temp[0] = '\0';
-                    break;
-                }
-            }
-            else
-            {
-                Disp_pos += Gpu_Rom_Font_WH(Read_sfk, Font);                       // update dispos Font
-                Buffer.temp = Buffer.notepad[Line] + strlen(Buffer.notepad[Line]); // load into temporary buffer
-                Buffer.temp[-1] = Read_sfk;                                        // update the string
-                Buffer.temp[0] = '_';
-                Buffer.temp[1] = '\0';
-                noofchars = strlen(Buffer.notepad[Line]); // get the string len
-                if (Disp_pos > LINE_ENDPOS)               // check if there is place to put a character in a specific line
-                {
-                    Buffer.temp = Buffer.notepad[Line] + (strlen(Buffer.notepad[Line]) - 1);
-                    Buffer.temp[0] = '\0';
-                    noofchars -= 1;
-                    Disp_pos = LINE_STARTPOS;
-                    Line++;
-                    if (Line >= MAX_LINES)
-                        Line = 0;
-                    memset((Buffer.notepad[Line]), '\0', sizeof(Buffer.notepad[Line])); // Clear the line buffer
-                    for (; noofchars >= 1; noofchars--, tval++)
-                    {
-                        if (Buffer.notepad[Line - 1][noofchars] == ' ' || Buffer.notepad[Line - 1][noofchars] == '.') // In case of space(New String) or end of statement(.)
-                        {
-                            memset(Buffer.notepad[Line - 1] + noofchars, '\0', 1);
-                            noofchars += 1; // Include the space
-                            memcpy(&Buffer.notepad[Line], (Buffer.notepad[Line - 1] + noofchars), tval);
-                            break;
-                        }
-                    }
-                    noofchars = strlen(Buffer.notepad[Line]);
-                    Buffer.temp = Buffer.notepad[Line] + noofchars;
-                    Buffer.temp[0] = '_';
-                    Buffer.temp[1] = '\0';
-                    for (tval = 0; tval < noofchars; tval++)
-                        Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][tval], Font); // Update the Disp_Pos
-                }
-            }
-        }
-        // Display List start
-        Gpu_CoCmd_Dlstart(phost);
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(120, 120, 120));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, TAG_MASK(1)); // enable tagbuffer updation
-        Gpu_CoCmd_FgColor(phost, 0xB40000);     // 0x703800 0xD00000
-        Gpu_CoCmd_BgColor(phost, 0xB40000);
 
-        But_opt = (Read_sfk == BACK) ? OPT_FLAT : 0; // button color change if the button during press
-
-        if (Read_sfk == BACK && screenType != HOME_SCREEN)
-        {
-            Home_Menu(&host, profile,MAINMENU); //soon
-            break; // Without the break the screen will flicker back to Home and key pass code.
-        }
-        renderButtons(phost, Read_sfk, font);
-
-        if (Read_sfk == 253)
-        {
-            const char *correctPasscode = "1234"; // Replace with your desired passcode
-            char enteredPasscode[MAX_CHAR_PER_LINE];
-            strncpy(enteredPasscode, Buffer.notepad[0], MAX_CHAR_PER_LINE - 1);
-            enteredPasscode[MAX_CHAR_PER_LINE - 1] = '\0';
-            enteredPasscode[strlen(enteredPasscode) - 1] = '\0'; // Remove the underscore
-
-            if (checkPasscode(phost, enteredPasscode, correctPasscode))
-            {
-                switch (screenType)
-                {
-                case HOME_SCREEN:
-                    return true; // Will continue the Home_Menu in the xy_init
-                    break;
-                case TRAY_SCREEN:
-                    Tray_Screen(phost, profile);
-                    break;
-                }
-                return false; // Without this then the Home button in the Tray_Screen will not return to Home Menu
-            }
-            else
-            {
-                Gpu_CoCmd_Text(phost, 100, 100, font, OPT_CENTER, "Try again");
-                App_WrCoCmd_Buffer(phost, DISPLAY());
-                Gpu_CoCmd_Swap(phost);
-                App_Flush_Co_Buffer(phost);
-                delay(1000); // Show the message for 1 second
-
-                // Redraw the screen with buttons
-                Gpu_CoCmd_Dlstart(phost);
-                App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(120, 120, 120));
-                App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-                App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-                renderButtons(phost, Read_sfk, font);
-                App_WrCoCmd_Buffer(phost, DISPLAY());
-                Gpu_CoCmd_Swap(phost);
-                App_Flush_Co_Buffer(phost);
-            }
-        }
-
-        if (Flag.Numeric == ON)
-        {
-            Gpu_CoCmd_Keys(phost, 47, 35, 150, 50, 29, Read_sfk, "789");
-            Gpu_CoCmd_Keys(phost, 47, 88, 150, 50, 29, Read_sfk, "456");
-            Gpu_CoCmd_Keys(phost, 47, 140, 150, 50, 29, Read_sfk, "123");
-            Gpu_CoCmd_Keys(phost, 47, 191, 150, 40, 29, Read_sfk, "0#");
-        }
-        App_WrCoCmd_Buffer(phost, TAG_MASK(0)); // Disable the tag buffer updates
-        App_WrCoCmd_Buffer(phost, SCISSOR_XY(0, 0));
-        App_WrCoCmd_Buffer(phost, SCISSOR_SIZE(320, 25));
-
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Text Color
-        line2disp = 0;
-        while (line2disp <= Line)
-        {
-            // nextline = 3 + (line2disp * (DispHeight * .073));
-            Gpu_CoCmd_Text(phost, line2disp, nextline, font, 0, (const char *)&Buffer.notepad[line2disp]);
-            line2disp++;
-        }
-        App_WrCoCmd_Buffer(phost, DISPLAY());
-        Gpu_CoCmd_Swap(phost);
-        App_Flush_Co_Buffer(phost);
-    } while (1);
-}
-
-uint8_t Read_Keypad()
-{
-    static uint8_t Read_tag = 0, temp_tag = 0, touch_detect = 1; // ret_tag = 0,
-    Read_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
-    // ret_tag = 0;
-    if (istouch() == 0)
-        touch_detect = 0;
-    if (Read_tag != 0) // Allow if the Key is released
-    {
-        if (temp_tag != Read_tag && touch_detect == 0)
-        {
-            temp_tag = Read_tag; // Load the Read tag to temp variable
-            touch_detect = 1;
-        }
+        App_WrCoCmd_Buffer(phost, TAG(CAPS_LOCK)); // Capslock
+        Gpu_CoCmd_Button(phost, 0, (DispHeight * 0.70), (DispWidth * 0.10), (DispHeight * 0.112), font, 
+						(keypressed==CAPS_LOCK)? OPT_FLAT : 0,
+                         ((caplock) ?"a^" : "A^"));
+        App_WrCoCmd_Buffer(phost, TAG(NUMBER_LOCK)); // Numberlock
+        Gpu_CoCmd_Button(phost, 0, (DispHeight * 0.83), (DispWidth * 0.10), (DispHeight * 0.112), font, 
+						(keypressed==NUMBER_LOCK)? OPT_FLAT : 0,
+                         "12*");
     }
-    else
+	else
     {
-        if (temp_tag != 0)
-        {
-            Flag.Key_Detect = 1;
-            Read_tag = temp_tag;
-        }
-        temp_tag = 0;
+        Gpu_CoCmd_Keys(phost, (DispWidth * 0), (DispHeight * 0.442), DispWidth, (DispHeight * 0.112), font,
+                       keypressed, "1234567890");
+        Gpu_CoCmd_Keys(phost, (DispWidth * 0.042), (DispHeight * 0.57), (DispWidth * 0.96), (DispHeight * 0.112),
+                       font, keypressed, "-@#$%^&*(");
+        Gpu_CoCmd_Keys(phost, (DispWidth * 0.125), (DispHeight * 0.70), (DispWidth * 0.73), (DispHeight * 0.112),
+                       font, keypressed, ")_+[]{}");
+        App_WrCoCmd_Buffer(phost, TAG(NUMBER_LOCK)); // Numberlock
+        Gpu_CoCmd_Button(phost, 0, (DispHeight * 0.83), (DispWidth * 0.10), (DispHeight * 0.112), font, 
+						(keypressed==NUMBER_LOCK)? OPT_FLAT : 0,
+                         "AB*");
     }
-    return Read_tag;
+	Gpu_CoCmd_FgColor(phost, 0x006400);
+	App_WrCoCmd_Buffer(phost, TAG(SAVE_KEY)); // Enter
+	Gpu_CoCmd_Button(phost, (DispWidth * 0.653), (DispHeight * 0.83), (DispWidth * 0.192), (DispHeight * 0.112), font, 
+					(keypressed==SAVE_KEY)? OPT_FLAT : 0, "Enter");
+	Gpu_CoCmd_FgColor(phost, 0x703800);
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0)); // Disable the tag buffer updates
+	App_WrCoCmd_Buffer(phost, SCISSOR_XY(0, 0));
+	App_WrCoCmd_Buffer(phost, SCISSOR_SIZE(DispWidth, (uint16_t)(DispHeight * 0.41)));
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+	App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255)); // Text Color
+
+    if(errorcode)
+	{
+		sprintf(buf,"%s\n%s",displaytext,"error");
+		Gpu_CoCmd_Text(phost, 0, 0, font, 0, buf);
+    }
+	else
+		Gpu_CoCmd_Text(phost, 0, 0, font, 0, displaytext);
+
+	App_WrCoCmd_Buffer(phost, SCISSOR_XY(0, 77));
+	App_WrCoCmd_Buffer(phost, SCISSOR_SIZE(DispWidth, (uint16_t)(DispHeight * 0.1)));
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(120, 120, 120));
+	App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 0));
+	Gpu_CoCmd_Text(phost, 160 - (strlen(displaytitle)*5), 78, 27, 0, displaytitle);
+
+	Disp_End(phost);
+
+	
+}
+uint8_t GetKeyPressed(void)
+{
+	uint8_t tempkey[2];
+	
+	tempkey[0]=Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
+	//delay(10);
+	tempkey[1]=Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
+
+	return (tempkey[0] == tempkey[1])? tempkey[0] : 0;
 }
 
-uchar8_t istouch()
+void WaitKeyRelease(void)
 {
-    return !(Gpu_Hal_Rd16(phost, REG_TOUCH_RAW_XY) & 0x8000);
+	while(Gpu_Hal_Rd8(phost, REG_TOUCH_TAG)>0);
 }
 
-uint8_t Gpu_Rom_Font_WH(uint8_t Char, uint8_t font)
+void Keyboard(Gpu_Hal_Context_t *phost,char *curtext,char *curtitle,bool password)
 {
-    uint32_t ptr, Wptr;
-    uint8_t Width = 0;
+	uint8_t keypressed = 0;
 
-    ptr = Gpu_Hal_Rd8(phost, ROMFONT_TABLEADDRESS);
-    // read Width of the character
-    Wptr = (ptr + (148 * (font - 16))) + Char; // (table starts at font 16)
-    Width = Gpu_Hal_Rd8(phost, Wptr);
-    return Width;
-}
-
-void AlphaNumeric(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo, Profile &profile)
-{
-    delay(50); // Added to create smooth transition between screen
-    phost = &host;
+    delay(200); // Added to create smooth transition between screen
+    //phost = &host;
     /*local variables*/
-    uint8_t Line = 0;
-    uint16_t Disp_pos = 0, But_opt;
-    uint16_t Read_sfk = 0, tval;
     uint16_t noofchars = 0, line2disp = 0, nextline = 0;
     uint8_t font = 27;
+	//char curtext[PROFILE_NAME_MAX_LEN]="hello";
+	char buf[PROFILE_NAME_MAX_LEN+20];
+	uint8_t i;
+	uint8_t curpos=0;
+	bool wait4key=TRUE;
+	bool numlock=FALSE;
+	bool caplock=FALSE;
 
-    // Clear Linebuffer
-    for (tval = 0; tval < MAX_LINES; tval++)
-        memset(&Buffer.notepad[tval], '\0', sizeof(Buffer.notepad[tval]));
 
+	for(i=0;i<PROFILE_NAME_MAX_LEN;i++) buf[i]='\0';
+    strcpy(buf, curtext);
+
+	
     /*initial setup*/
-    Line = 0;                                                   // Starting line
-    Disp_pos = LINE_STARTPOS;                                   // starting pos
+    curpos = strlen(buf);                                   // starting pos
+   	buf[curpos]=0;
     Flag.Numeric = OFF;                                         // Disable the numbers and spcial charaters
-    memset((Buffer.notepad[Line] + 0), '\0', 1);                // Initialize Null character
-    Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][0], Font); // Update the Disp_Pos
-    noofchars += 1;                                             // for cursor
-                                                                /*enter*/
-    Flag.Exit = 0;
-    do
-    {
-        Read_sfk = Read_Keypad(); // read the keys
 
-        if (Flag.Key_Detect)
-        {                        // check if key is pressed
-            Flag.Key_Detect = 0; // clear it
-            if (Read_sfk >= SPECIAL_FUN)
-            { // check any special function keys are pressed
-                switch (Read_sfk)
-                {
+	DisplayKeyboard(phost, keypressed,buf,curtitle,numlock,caplock,0);
+	//for(i=0;i<14;i++) Dprint(buf[i]);
+	Dprint("end");
+
+	do{
+		keypressed = GetKeyPressed();
+	
+		if(keypressed>0)
+		{
+			//DisplayKeyboard(phost, keypressed,buf,numlock,caplock,0);
+			WaitKeyRelease();
+
+            switch (keypressed)
+            {
                 case BACK_SPACE:
-                    if (noofchars > 1) // check in the line there is any characters are present, cursor not included
+                    if (curpos>0) // check in the line there is any characters are present, cursor not included
                     {
-                        noofchars -= 1;                                                             // clear the character in the buffer
-                        Disp_pos -= Gpu_Rom_Font_WH(*(Buffer.notepad[Line] + noofchars - 1), Font); // Update the Disp_Pos
+	                    Dprint("BKSP");
+                        curpos--;                                                             // clear the character in the buffer
+                        buf[curpos]=0;
+						if(password) curtext[curpos]=0;
+						Dprint(curpos);      
                     }
-                    else
-                    {
-                        if (Line >= (MAX_LINES - 1))
-                            Line--;
-                        else
-                            Line = 0;                                                      // check the lines
-                        noofchars = strlen(Buffer.notepad[Line]);                          // Read the len of the line
-                        for (tval = 0; tval < noofchars; tval++)                           // Compute the length of the Line
-                            Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][tval], Font); // Update the Disp_Pos
-                    }
-                    Buffer.temp = (Buffer.notepad[Line] + noofchars); // load into temporary buffer
-                    if (Buffer.temp > Buffer.notepad[Line])           // check if temp is not pointing to the first element
-                    {
-                        Buffer.temp[-1] = ' '; // update the string
-                    }
-                    Buffer.temp[0] = '\0';
+					keypressed=0;
                     break;
 
                 case CAPS_LOCK:
-                    Flag.Caps ^= 1; // toggle the caps lock on when the key detect
+					Dprint("cap");
+					keypressed=0;
+                    caplock=!caplock; // toggle the caps lock on when the key detect
                     break;
 
                 case NUMBER_LOCK:
-                    Flag.Numeric ^= 1; // toggle the number lock on when the key detect
+					Dprint("num");
+					keypressed=0;
+                    numlock=(numlock)? FALSE:TRUE; // toggle the number lock on when the key detect
                     break;
-
-                case BACK:
-                    for (tval = 0; tval < MAX_LINES; tval++)
-                        memset(&Buffer.notepad[tval], '\0', sizeof(Buffer.notepad[tval]));
-
-                    // Line = 0;                                                   // Starting line
-                    // Disp_pos = LINE_STARTPOS;                                   // starting pos
-                    // memset((Buffer.notepad[Line] + 0), ' ', 1);                 // For Cursor
-                    // Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][0], Font); // Update the Disp_Pos
-                    // noofchars += 1;
-
-                    // Check if the buffer can accommodate an additional character
-                    if (noofchars < (sizeof(Buffer.notepad[Line]) - 1))
-                    {
-                        memset((Buffer.notepad[Line] + 0), ' ', 1);                 // For Cursor
-                        Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][0], Font); // Update the Disp_Pos
-                        noofchars += 1;
-                    }
-                    break;
-                }
+				case CLEAR_KEY: keypressed=0;
+							curpos=0;
+							buf[curpos]=0;
+							if(password) curtext[curpos]=0;
+							break;
+				case KBBACK: 	keypressed=0;
+								wait4key=FALSE;
+								break;
+					
+				case SAVE_KEY:	keypressed=0;
+								wait4key=FALSE;
+								strcpy(curtext,buf);
+								break;
+				default:	if(curpos<PROFILE_NAME_MAX_LEN)
+							{
+								//Dprint(curpos);
+								buf[curpos]=keypressed;
+								if(password)
+								{
+									curtext[curpos]='*';
+									curtext[curpos+1]=0;
+								}
+								buf[++curpos]=0;
+								keypressed=0;
+							}
+							else 
+							{
+								DisplayKeyboard(phost, keypressed,buf,curtitle,numlock,caplock,TRUE);
+								keypressed=0;
+								delay(500);
+							}
+							break;
+								
             }
-            else
-            {
-                Disp_pos += Gpu_Rom_Font_WH(Read_sfk, Font);                       // update dispos
-                Buffer.temp = Buffer.notepad[Line] + strlen(Buffer.notepad[Line]); // load into temporary buffer
-                Buffer.temp[-1] = Read_sfk;                                        // update the string
-                Buffer.temp[0] = ' ';
-                Buffer.temp[1] = '\0';
-                noofchars = strlen(Buffer.notepad[Line]); // get the string len
-                if (Disp_pos > LINE_ENDPOS)               // check if there is place to put a character in a specific line
-                {
-                    Buffer.temp = Buffer.notepad[Line] + (strlen(Buffer.notepad[Line]) - 1);
-                    Buffer.temp[0] = '\0';
-                    noofchars -= 1;
-                    Disp_pos = LINE_STARTPOS;
-                    Line++;
-                    if (Line >= MAX_LINES)
-                        Line = 0;
-                    memset((Buffer.notepad[Line]), '\0', sizeof(Buffer.notepad[Line])); // Clear the line buffer
-                    for (; noofchars >= 1; noofchars--, tval++)
-                    {
-                        if (Buffer.notepad[Line - 1][noofchars] == ' ' || Buffer.notepad[Line - 1][noofchars] == '.') // In case of space(New String) or end of statement(.)
-                        {
-                            memset(Buffer.notepad[Line - 1] + noofchars, '\0', 1);
-                            noofchars += 1; // Include the space
-                            memcpy(&Buffer.notepad[Line], (Buffer.notepad[Line - 1] + noofchars), tval);
-                            break;
-                        }
-                    }
-                    noofchars = strlen(Buffer.notepad[Line]);
-                    Buffer.temp = Buffer.notepad[Line] + noofchars;
-                    Buffer.temp[0] = ' ';
-                    Buffer.temp[1] = '\0';
-                    for (tval = 0; tval < noofchars; tval++)
-                        Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][tval], Font); // Update the Disp_Pos
-                }
-            }
-        }
+			if(wait4key)
+			{
+				if(password)
+					DisplayKeyboard(phost, keypressed,curtext,curtitle,numlock,caplock,0);
+				else
+					DisplayKeyboard(phost, keypressed,buf,curtitle,numlock,caplock,0);
+			}
+		}
+   }while (wait4key);
 
-        // Display List start
-        Gpu_CoCmd_Dlstart(phost);
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(100, 100, 100));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, TAG_MASK(1)); // enable tagbuffer updation
-
-        Gpu_CoCmd_FgColor(phost, 0x703800);
-        Gpu_CoCmd_BgColor(phost, 0x703800);
-        But_opt = (Read_sfk == BACK) ? OPT_FLAT : 0; // button color change if the button during press
-        App_WrCoCmd_Buffer(phost, TAG(BACK));        // Back		 Return to Home
-        Gpu_CoCmd_Button(phost, (DispWidth * 0.855), (DispHeight * 0.83), (DispWidth * 0.146), (DispHeight * 0.112),
-                         font, But_opt, "Clear");
-        But_opt = (Read_sfk == BACK_SPACE) ? OPT_FLAT : 0;
-        App_WrCoCmd_Buffer(phost, TAG(BACK_SPACE)); // BackSpace
-        Gpu_CoCmd_Button(phost, (DispWidth * 0.875), (DispHeight * 0.70), (DispWidth * 0.125),
-                         (DispHeight * 0.112), font, But_opt, "<-");
-
-        But_opt = (Read_sfk == ' ') ? OPT_FLAT : 0;
-        App_WrCoCmd_Buffer(phost, TAG(' ')); // Space
-        Gpu_CoCmd_Button(phost, (DispWidth * 0.315), (DispHeight * 0.83), (DispWidth * 0.33), (DispHeight * 0.112),
-                         font, But_opt, "Space");
-
-        But_opt = (Read_sfk == BACK_KEY) ? OPT_FLAT : 0; // button color change if the button during press
-
-        if (Read_sfk == BACK_KEY)
-        {
-            Config_Settings(phost, tube_no_x, tube_no_y, pitch_row_x, pitch_col_y, trayOriginX_row, trayOriginY_col, cyclesNo, profile);
-            break;
-        }
-        App_WrCoCmd_Buffer(phost, TAG(BACK_KEY)); // Back		 Return to Home
-        Gpu_CoCmd_Button(phost, (DispWidth * 0.115), (DispHeight * 0.83), (DispWidth * 0.192), (DispHeight * 0.112),
-                         font, But_opt, "Back");
-
-        But_opt = (Read_sfk == SAVE_KEY) ? OPT_FLAT : 0;
-        if (Read_sfk == SAVE_KEY)
-        {
-            char profileNameArray[30];
-            if (ProfileNameTag == true)
-            {
-                strncpy(profileNameArray, Buffer.notepad[0], sizeof(profileNameArray) - 1);      // ensure not to exceed buffer size
-                profileNameArray[sizeof(profileNameArray) - 1] = '\0';                           // ensure null termination
-                strncpy(profile.profileName, profileNameArray, sizeof(profile.profileName) - 1); // ensure not to exceed buffer size
-                profile.profileName[sizeof(profile.profileName) - 1] = '\0';                     // ensure null termination
-            }
-            if (strlen(profile.profileName) == 0)
-            {
-                strcpy(profile.profileName, "Profile 1"); // Assign default name "Untitled"
-            }
-            // profile.profileId = getLastUsedProfileId();
-//             saveProfile(profile, profile.profileId);
-            saveProfile(profile);
-            Config_Settings(phost, tube_no_x, tube_no_y, pitch_row_x, pitch_col_y, trayOriginX_row, trayOriginY_col, cyclesNo, profile);
-            break;
-        }
-
-        if (Flag.Numeric == OFF)
-        {
-            Gpu_CoCmd_Keys(phost, 0, (DispHeight * 0.442), DispWidth, (DispHeight * 0.112), font, Read_sfk,
-                           (Flag.Caps == ON ? "QWERTYUIOP" : "qwertyuiop"));
-            Gpu_CoCmd_Keys(phost, (DispWidth * 0.042), (DispHeight * 0.57), (DispWidth * 0.96), (DispHeight * 0.112),
-                           font, Read_sfk, (Flag.Caps == ON ? "ASDFGHJKL" : "asdfghjkl"));
-            Gpu_CoCmd_Keys(phost, (DispWidth * 0.125), (DispHeight * 0.70), (DispWidth * 0.73), (DispHeight * 0.112),
-                           font, Read_sfk, (Flag.Caps == ON ? "ZXCVBNM" : "zxcvbnm"));
-
-            But_opt = (Read_sfk == CAPS_LOCK) ? OPT_FLAT : 0;
-            App_WrCoCmd_Buffer(phost, TAG(CAPS_LOCK)); // Capslock
-            Gpu_CoCmd_Button(phost, 0, (DispHeight * 0.70), (DispWidth * 0.10), (DispHeight * 0.112), font, But_opt,
-                             "a^");
-            But_opt = (Read_sfk == NUMBER_LOCK) ? OPT_FLAT : 0;
-            App_WrCoCmd_Buffer(phost, TAG(NUMBER_LOCK)); // Numberlock
-            Gpu_CoCmd_Button(phost, 0, (DispHeight * 0.83), (DispWidth * 0.10), (DispHeight * 0.112), font, But_opt,
-                             "12*");
-        }
-        if (Flag.Numeric == ON)
-        {
-            Gpu_CoCmd_Keys(phost, (DispWidth * 0), (DispHeight * 0.442), DispWidth, (DispHeight * 0.112), font,
-                           Read_sfk, "1234567890");
-            Gpu_CoCmd_Keys(phost, (DispWidth * 0.042), (DispHeight * 0.57), (DispWidth * 0.96), (DispHeight * 0.112),
-                           font, Read_sfk, "-@#$%^&*(");
-            Gpu_CoCmd_Keys(phost, (DispWidth * 0.125), (DispHeight * 0.70), (DispWidth * 0.73), (DispHeight * 0.112),
-                           font, Read_sfk, ")_+[]{}");
-            But_opt = (Read_sfk == NUMBER_LOCK) ? OPT_FLAT : 0;
-            App_WrCoCmd_Buffer(phost, TAG(253)); // Numberlock
-            Gpu_CoCmd_Button(phost, 0, (DispHeight * 0.83), (DispWidth * 0.10), (DispHeight * 0.112), font, But_opt,
-                             "AB*");
-        }
-
-        App_WrCoCmd_Buffer(phost, TAG(SAVE_KEY)); // Enter
-        Gpu_CoCmd_Button(phost, (DispWidth * 0.653), (DispHeight * 0.83), (DispWidth * 0.192), (DispHeight * 0.112), font, But_opt, "Enter");
-        App_WrCoCmd_Buffer(phost, TAG_MASK(0)); // Disable the tag buffer updates
-        App_WrCoCmd_Buffer(phost, SCISSOR_XY(0, 0));
-        App_WrCoCmd_Buffer(phost, SCISSOR_SIZE(DispWidth, (uint16_t)(DispHeight * 0.405)));
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 255));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Text Color
-        line2disp = 0;
-        while (line2disp <= Line)
-        {
-            nextline = 3 + (line2disp * (DispHeight * .073));
-            Gpu_CoCmd_Text(phost, line2disp, nextline, font, 0, (const char *)&Buffer.notepad[line2disp]);
-            line2disp++;
-        }
-        Disp_End(phost);
-    } while (1);
 }
 
-//int32_t getLastSavedProfileId()
-//{
-//    Profile profile;
-//    // initializeProfile(profile);
-//    // use profile
-//
-//    for (int32_t i = 0; i < MAX_PROFILES; i++)
-//    {
-//        if (!loadProfile(profile, i))
-//        {
-//            if (i == 0)
-//            {
-//                return -1; // No profiles have been saved yet
-//            }
-//            else
-//            {
-//                return i - 1;
-//            }
-//        }
-//    }
-//    return MAX_PROFILES - 1; // All profiles are saved, return the last one
-//}
 
-void Print_Profile(Gpu_Hal_Context_t *phost, Profile &profile)
+
+void DisplayProfileMenu(Profile curprof, uint8_t keypressed, uint8_t curprofnum)
 {
-    char buffer[100]; // a buffer to format your text before printing.
+	char buf[100]; // a buffer to format your text before printing.
+
+	Gpu_CoCmd_FlashFast(phost, 0);
+	Gpu_CoCmd_Dlstart(phost);
+	
+	App_WrCoCmd_Buffer(phost, CLEAR_TAG(255));
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+	App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+	
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+	Gpu_CoCmd_Text(phost, 84, 16, 27, 0, "Profile Selector");
+	
+	Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+	App_WrCoCmd_Buffer(phost, TAG(PROFILEBACK));
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
+	Gpu_CoCmd_Button(phost, 233, 11, 76, 26, 21, (keypressed==PROFILEBACK)? OPT_FLAT :0 , "Back");
+	
+	Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+	App_WrCoCmd_Buffer(phost, TAG(PROFILELOAD));
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
+	Gpu_CoCmd_Button(phost, 8, 205, 76, 26, 21, (keypressed==PROFILELOAD)? OPT_FLAT :0 , "Load");
+	
+	Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+	App_WrCoCmd_Buffer(phost, TAG(PROFILEPASS)); //disable advanced button
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));		
+	Gpu_CoCmd_Button(phost, 180, 205, 132, 26, 21, (keypressed==PROFILEPASS)? OPT_FLAT :0 , "Change Password");
+	
+	Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+	App_WrCoCmd_Buffer(phost, TAG(PROFILEUP));
+	//App_WrCoCmd_Buffer(phost, TAG(350)); //disbale Up
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
+	Gpu_CoCmd_Button(phost, 265, 76, 44, 29, 21, (keypressed==PROFILEUP)? OPT_FLAT :0 , "Up");
+	
+	Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+	App_WrCoCmd_Buffer(phost, TAG(PROFILEDOWN));// disbale Up and down
+	//App_WrCoCmd_Buffer(phost, TAG(300)); //disbale Down and down
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
+	Gpu_CoCmd_Button(phost, 265, 121, 44, 29, 21, (keypressed==PROFILEDOWN)? OPT_FLAT :0 , "Down");
+	
+	App_WrCoCmd_Buffer(phost, BEGIN(RECTS)); // Profile Name Field
+	App_WrCoCmd_Buffer(phost, VERTEX2F(160, 1008));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(4944, 704));
+	
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0));
+	
+	Gpu_CoCmd_Text(phost, 160, 54, 27, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, (const char *)curprof.profileName);
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 127));    
 
     // Print profileId
-    sprintf(buffer, "Profile ID:    %" PRId32, profile.profileId);
-    Gpu_CoCmd_Text(phost, 8, 65, 21, 0, buffer);
+    sprintf(buf, "Profile ID:    %d", curprofnum+1);
+    Gpu_CoCmd_Text(phost, 8, 65, 21, 0, buf);
 
     // // Print profileName
-    // sprintf(buffer, "Profile Name: %s", profile.profileName);
+    // sprintf(buffer, "Profile Name: %s", curprof.profileName);
     // Gpu_CoCmd_Text(phost, 84, 56, 27, 0, buffer);
 
     // Print Tube_No_x
-    sprintf(buffer, "Columns:     %" PRId32, profile.Tube_No_x);
-    Gpu_CoCmd_Text(phost, 8, 80, 21, 0, buffer);
+    sprintf(buf, "Columns:     %d", curprof.Tube_No_x);
+    Gpu_CoCmd_Text(phost, 8, 80, 21, 0, buf);
 
     // Print Tube_No_y
-    sprintf(buffer, "Rows:         %" PRId32, profile.Tube_No_y);
-    Gpu_CoCmd_Text(phost, 8, 95, 21, 0, buffer);
+    sprintf(buf, "Rows:         %d", curprof.Tube_No_y);
+    Gpu_CoCmd_Text(phost, 8, 95, 21, 0, buf);
 
     // Print pitch_x
-    char pitch_x_str[10];
-    dtostrf(profile.pitch_x, 4, 1, pitch_x_str);
+    dtostrf(curprof.pitch_x, 4, 1, buf);
     Gpu_CoCmd_Text(phost, 8, 110, 21, 0, "Pitch(Col):");
-    Gpu_CoCmd_Text(phost, 82, 110, 21, 0, pitch_x_str);
+    Gpu_CoCmd_Text(phost, 82, 110, 21, 0, buf);
 
     // Print pitch_y
-    char pitch_y_str[10];
-    dtostrf(profile.pitch_y, 4, 1, pitch_y_str);
+    dtostrf(curprof.pitch_y, 4, 1, buf);
     Gpu_CoCmd_Text(phost, 8, 125, 21, 0, "Pitch(Ros):");
-    Gpu_CoCmd_Text(phost, 83, 125, 21, 0, pitch_y_str);
+    Gpu_CoCmd_Text(phost, 83, 125, 21, 0, buf);
 
     // Print trayOriginX
-    char trayOriginX_str[10];
-    dtostrf(profile.trayOriginX, 4, 1, trayOriginX_str);
+    dtostrf(curprof.trayOriginX, 4, 1, buf);
     Gpu_CoCmd_Text(phost, 8, 140, 21, 0, "OriginX:");
-    Gpu_CoCmd_Text(phost, 80, 140, 21, 0, trayOriginX_str);
+    Gpu_CoCmd_Text(phost, 80, 140, 21, 0, buf);
 
     // Print trayOriginY
-    char trayOriginY_str[10];
-    dtostrf(profile.trayOriginY, 4, 1, trayOriginY_str);
+    dtostrf(curprof.trayOriginY, 4, 1, buf);
     Gpu_CoCmd_Text(phost, 8, 155, 21, 0, "OriginY:");
-    Gpu_CoCmd_Text(phost, 80, 155, 21, 0, trayOriginY_str);
+    Gpu_CoCmd_Text(phost, 80, 155, 21, 0, buf);
 
     // Print Cycles
-    sprintf(buffer, "Cycles:       %" PRId32, profile.Cycles);
-    Gpu_CoCmd_Text(phost, 8, 170, 21, 0, buffer);
+    sprintf(buf, "Cycles:       %d" , curprof.Cycles);
+    Gpu_CoCmd_Text(phost, 8, 170, 21, 0, buf);
 
     // Print vibrationEnabled
-    sprintf(buffer, "Vibration:    %s", profile.vibrationEnabled ? "True" : "False");
-    Gpu_CoCmd_Text(phost, 8, 185, 21, 0, buffer);
+    sprintf(buf, "Vibration:    %s", curprof.vibrationEnabled ? "True" : "False");
+    Gpu_CoCmd_Text(phost, 8, 185, 21, 0, buf);
+
+	
+	Disp_End(phost);
+
 }
-
-void Handle_UpDownButtons(Gpu_Hal_Context_t *phost, uint8_t protag, Profile &profile)
+void Profile_Menu(Gpu_Hal_Context_t *phost)
 {
-    static uint8_t prev_protag = 0;
-    static int32_t selectedProfileIndex = 0; // This is now an index, not an ID
+   	Profile selectprof;
+	int8_t selectprofnum;
 
-    if (protag != prev_protag) // Check if the tag has changed
-    {
-        prev_protag = protag;
+    uint8_t keypressed = 0;
+	bool wait4key=TRUE;
 
-        switch (protag)
+	selectprofnum=CurProfNum;
+	ReadProfileEEPROM(selectprofnum,selectprof);
+	DisplayProfileMenu(selectprof,0,selectprofnum);
+
+    do{
+        keypressed = GetKeyPressed();
+        if (keypressed >0 )
         {
-        case 9: // Up button
-            if (selectedProfileIndex < MAX_PROFILES - 1)
-            {
-                selectedProfileIndex++;
-            }
-            else
-            {
-                selectedProfileIndex = 0;
-            }
-            getProfileName(selectedProfileIndex, profile.profileName, sizeof(profile.profileName));
-            getProfileByIndex(profile, selectedProfileIndex);
-            Gpu_Hal_Sleep(100);
-            break;
+        	DisplayProfileMenu(selectprof,keypressed,selectprofnum);
+			WaitKeyRelease();
 
-        case 10: // Down button
-            if (selectedProfileIndex > 0)
-            {
-                selectedProfileIndex--;
-            }
-            else
-            {
-                selectedProfileIndex = MAX_PROFILES - 1;
-            }
-            getProfileName(selectedProfileIndex, profile.profileName, sizeof(profile.profileName));
-            getProfileByIndex(profile, selectedProfileIndex);
-            Gpu_Hal_Sleep(100);
-            break;
-        default:
-            break;
+			switch(keypressed)
+			{
+				case PROFILEBACK: 	wait4key=FALSE;
+									keypressed=0;
+									break;
+				case PROFILELOAD: wait4key=FALSE;
+									keypressed=0;
+									CurProfNum=selectprofnum;
+									WriteCurIDEEPROM(selectprofnum);
+									ReadProfileEEPROM(CurProfNum,CurProf);
+									break;
+				case PROFILEUP: keypressed=0;
+								if(selectprofnum<MAX_PROFILES-1)
+								{
+									++selectprofnum;
+								}
+								else
+								{
+									selectprofnum=0;
+								}
+								ReadProfileEEPROM(selectprofnum,selectprof);
+								DisplayProfileMenu(selectprof,keypressed,selectprofnum);
+								break;
+				case PROFILEDOWN: 	keypressed=0;
+								if(selectprofnum>0)
+								{
+									--selectprofnum;
+								}
+								else
+								{
+									selectprofnum=MAX_PROFILES-1;
+								}
+								ReadProfileEEPROM(selectprofnum,selectprof);
+								
+								DisplayProfileMenu(selectprof,keypressed,selectprofnum);
+								break;
+				case PROFILEPASS: 								
+								Password[2][0]=0;
+								Keyboard(phost,Password[2],"Enter New Password",FALSE);
+								if(Password[2][0]!=0)							
+								{
+									Password[3][0]=0;
+									Keyboard(phost,Password[3],"Enter New Password again",FALSE);
+									if(strcmp(Password[2],Password[3])==0)
+									{
+										strcpy(Password[1],Password[2]);
+										WritePassEEPROM(Password[1]);
+										Keyboard(phost,"Password changed","Press Back to continue", FALSE);
+									}
+									else
+									{
+										Keyboard(phost,"Error : Different password entered","Press Back to continue", FALSE);
+									}
+								}
+								else
+								{
+									Keyboard(phost,"Error : No password entered","Press Back to continue", FALSE);
+								}
+								//keypressed=0;
+								break;
+				default : break;
+				
+			}
         }
-    }
+
+		DisplayProfileMenu(selectprof,keypressed,selectprofnum);
+
+    }while(wait4key);
 }
-
-void Profile_Menu(Gpu_Hal_Context_t *phost, Profile &profile)
+void UpdateConfigSet(Gpu_Hal_Context_t *phost, Profile curprof)
 {
-    getLastProfileAndCopy(); // Get the last profile
 
-    uint8_t protag = 0;
 
-    PageNum = 1;
-
-    while (1)
-    {
-        protag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
-        if (protag != 0 && (protag < 9 || protag > 10))
-        {
-            if (protag == 7) // Profile_Menu handle screen //
-            {
-                SelectProfile_flag = true;
-                protag = 0; // Reset the protag value after loading the profile
-                break;
-            }
-            return protag;
-        }
-
-        else
-        {
-            // Handle Up, Down, and Load buttons
-            Handle_UpDownButtons(phost, protag, profile);
-        }
-
-        Gpu_CoCmd_FlashFast(phost, 0);
-        Gpu_CoCmd_Dlstart(phost);
-
-        App_WrCoCmd_Buffer(phost, CLEAR_TAG(255));
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0, 0, 0));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Text(phost, 84, 16, 27, 0, "Profile Selector");
-
-        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-        App_WrCoCmd_Buffer(phost, TAG(6));
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 233, 11, 76, 26, 21, 0, "Home");
-
-        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-        App_WrCoCmd_Buffer(phost, TAG(7));
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 8, 205, 76, 26, 21, 0, "Select");
-
-//        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-//        App_WrCoCmd_Buffer(phost, TAG(800)); //disable advanced button
-//        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-//        Gpu_CoCmd_Button(phost, 233, 205, 76, 26, 21, 0, "Advanced");
-
-//        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-////        App_WrCoCmd_Buffer(phost, TAG(9));
-//        App_WrCoCmd_Buffer(phost, TAG(350)); //disbale Up
-//        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-//        Gpu_CoCmd_Button(phost, 265, 76, 44, 29, 21, 0, "Up");
-//
-//        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-////        App_WrCoCmd_Buffer(phost, TAG(10)); disbale Up and down
-////        App_WrCoCmd_Buffer(phost, TAG(300)); disbale Down and down
-//        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-//        Gpu_CoCmd_Button(phost, 265, 121, 44, 29, 21, 0, "Down");
-
-        App_WrCoCmd_Buffer(phost, BEGIN(RECTS)); // Profile Name Field
-        App_WrCoCmd_Buffer(phost, VERTEX2F(160, 1008));
-        App_WrCoCmd_Buffer(phost, VERTEX2F(4944, 704));
-
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 255));
-
-        Gpu_CoCmd_Text(phost, 150, 54, 27, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, (const char *)profile.profileName);
-        Print_Profile(phost, profile);
-
-        Disp_End(phost);
-    }
 }
-
-void Config_Settings(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo, Profile &profile)
+	
+void DisplayConfig(Gpu_Hal_Context_t *phost)
 {
-//    profile.profileId = getLastUsedProfileId();
-    // getLastUsedProfileName();
-    // loadProfile(profile, profile.profileId); //Bug, not able to rename the Profile name field
 
-    bool disableButtons = false;
-
-    float normalTravelDistX = (13 - 1) * 30.0; // Normal travel distance based on provided pitch and tube numbers
-    float normalTravelDistY = (17 - 1) * 30.0; // Normal travel distance based on provided pitch and tube numbers
-
-    float totalTravelDistX = (profile.Tube_No_x - 1) * profile.pitch_x;
-    float totalTravelDistY = (profile.Tube_No_y - 1) * profile.pitch_y;
-
-    PageNum = 1;
+	int16_t vibstatus;
+	char buf[PROFILE_NAME_MAX_LEN];
 
     Gpu_CoCmd_FlashFast(phost, 0);
     Gpu_CoCmd_Dlstart(phost);
@@ -1238,100 +969,77 @@ void Config_Settings(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_n
     Gpu_CoCmd_Text(phost, 41, 142, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Pitch(mm):");
     Gpu_CoCmd_Text(phost, 262, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Vibration:");
     Gpu_CoCmd_Text(phost, 44, 176, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Origin(mm):");
-//    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	//	  App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+	App_WrCoCmd_Buffer(phost, BEGIN(RECTS));
 
-    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-    App_WrCoCmd_Buffer(phost, BEGIN(RECTS));
+	// profile name(edit name)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(13));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(160, 1008));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(4944, 704));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // profile name(edit name)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(13));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(160, 1008));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(4944, 704));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// No. of tube(column)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(14));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(1664, 1776));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(2336, 1536));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // No. of tube(column)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(14));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(1664, 1776));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(2336, 1536));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// No. of tube(row)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(15));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(2576, 1776));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(3248, 1536));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // No. of tube(row)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(15));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(2576, 1776));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(3248, 1536));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// pitch(row)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(16));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(1664, 2352));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(2336, 2096));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // pitch(row)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(16));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(1664, 2352));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(2336, 2096));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// pitch(column)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(17));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(2576, 2352));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(3248, 2096));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // pitch(column)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(17));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(2576, 2352));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(3248, 2096));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// origin(row)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(18));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(1664, 2928));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(2336, 2624));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // origin(row)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(18));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(1664, 2928));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(2336, 2624));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// origin(column)
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(19));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(2576, 2928));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(3248, 2624));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // origin(column)
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(19));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(2576, 2928));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(3248, 2624));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	// Cycles
+	App_WrCoCmd_Buffer(phost, TAG_MASK(1));
+	App_WrCoCmd_Buffer(phost, TAG(20));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(3744, 1776));
+	App_WrCoCmd_Buffer(phost, VERTEX2F(4480, 1536));
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
-    // Cycles
-    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-    App_WrCoCmd_Buffer(phost, TAG(20));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(3744, 1776));
-    App_WrCoCmd_Buffer(phost, VERTEX2F(4480, 1536));
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+	App_WrCoCmd_Buffer(phost, END());
 
-    App_WrCoCmd_Buffer(phost, END());
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0));
+	Gpu_CoCmd_Text(phost, 150, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, (const char *)CurProf.profileName);
 
-    App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0));
-    Gpu_CoCmd_Text(phost, 150, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, (const char *)profile.profileName);
-
-//    static uint16_t lastVibrationStatus = 0xFFFF;
-//    uint16_t vibrationStatus = profile.vibrationEnabled ? 0 : 65535;
-//
-//    if (vibrationStatus != lastVibrationStatus)
-//    {
-//        // Store the new status for comparison in the next loop
-//        lastVibrationStatus = vibrationStatus;
-//    }
-//    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-//    App_WrCoCmd_Buffer(phost, TAG_MASK(1));
-//    App_WrCoCmd_Buffer(phost, TAG(25));
-//    Gpu_CoCmd_Toggle(phost, 242, 169, 40, 21, OPT_FLAT | OPT_FORMAT, vibrationStatus, "On\xFFOff");
-//    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
-//    App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0));
-
-    static uint16_t lastVibrationStatus = 0xFFFF;
-    uint16_t vibrationStatus = profile.vibrationEnabled ? 0 : 65535;
-
-    if (vibrationStatus != lastVibrationStatus)
-    {
-        // Store the new status for comparison in the next loop
-        lastVibrationStatus = vibrationStatus;
-		delay(500);//soon
-    }
-    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
     Gpu_CoCmd_BgColor(phost, 0x00A2E8);
     // Check the vibration status and set the foreground color accordingly
-    if (vibrationStatus == 0) {  
+    vibstatus= CurProf.vibrationEnabled ? 0 : 65535;
+    if (vibstatus == 0) {  
     Gpu_CoCmd_FgColor(phost, 0x007300);  // Green when ON
     App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 128, 0)); //text color
     } else {
@@ -1341,217 +1049,259 @@ void Config_Settings(Gpu_Hal_Context_t *phost, int32_t tube_no_x, int32_t tube_n
 
     App_WrCoCmd_Buffer(phost, TAG_MASK(1));
     App_WrCoCmd_Buffer(phost, TAG(25));
-    Gpu_CoCmd_Toggle(phost, 242, 169, 40, 21, OPT_FLAT | OPT_FORMAT, vibrationStatus, "On\xFFOff");
+    Gpu_CoCmd_Toggle(phost, 242, 169, 40, 21, OPT_FLAT | OPT_FORMAT, vibstatus, "On\xFFOff");
     Gpu_CoCmd_BgColor(phost, 0x00A2E8);
     Gpu_CoCmd_FgColor(phost,0x007300);
     App_WrCoCmd_Buffer(phost, TAG_MASK(0));
     App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0));
-    
-    // Check the conditions and display the warning text if necessary
-    if ((profile.Tube_No_x > 13) || (profile.Tube_No_y > 17))
-    {
-        // Reset values to maximum if they are above 13/17
-        if (profile.Tube_No_x >= 14)
-        {
-            profile.Tube_No_x = 13;
-        }
-        if (profile.Tube_No_y >= 18)
-        {
-            profile.Tube_No_y = 17;
-        }
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-        Gpu_CoCmd_Text(phost, 30, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Error:");
-        Gpu_CoCmd_Text(phost, 265, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Out of range!");
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
 
-    // Gpu_CoCmd_Text(phost, 124, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "%d", profile.Tube_No_x);
-    // Gpu_CoCmd_Text(phost, 182, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "%d", profile.Tube_No_y);
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
+    sprintf(buf,"%d",CurProf.Tube_No_x);
+    Gpu_CoCmd_Text(phost, 124, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
+    sprintf(buf,"%d",CurProf.Tube_No_y);
+    Gpu_CoCmd_Text(phost, 182, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
 
-    // Display the text with color depending on the conditions
-    if (profile.Tube_No_x > 13)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 124, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "%d", profile.Tube_No_x);
+	dtostrf(CurProf.pitch_x,4,1,buf);
+    Gpu_CoCmd_Text(phost, 124, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
+	
+	dtostrf(CurProf.pitch_y,4,1,buf);
+    Gpu_CoCmd_Text(phost, 182, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
 
-    if (profile.Tube_No_y > 17)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 182, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "%d", profile.Tube_No_y);
+  	dtostrf(CurProf.trayOriginX,4,1,buf);
+    Gpu_CoCmd_Text(phost, 125, 174, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
 
-    // Check if the new travel distance exceeds the normal travel distance
-    if (totalTravelDistX > normalTravelDistX || totalTravelDistY > normalTravelDistY)
-    {
-        // Reset values to maximum if they are above 13/17
-        if (profile.pitch_x >= 18.7)
-        {
-            profile.pitch_x = 18.6;
-        }
-        if (profile.pitch_y >= 18.7)
-        {
-            profile.pitch_y = 18.6;
-        }
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-        Gpu_CoCmd_Text(phost, 30, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Error:");
-        Gpu_CoCmd_Text(phost, 265, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Out of range!");
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
+	dtostrf(CurProf.trayOriginY,4,1,buf);
+	Gpu_CoCmd_Text(phost, 182, 174, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
 
-    // Convert input pitch values to decimal
-    char pitch_x_str[10];
-    char pitch_y_str[10];
-
-    dtostrf(profile.pitch_x, 4, 1, pitch_x_str);
-    dtostrf(profile.pitch_y, 4, 1, pitch_y_str);
-
-    // Gpu_CoCmd_Text(phost, 124, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, pitch_x_str);
-    // Gpu_CoCmd_Text(phost, 182, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, pitch_y_str);
-
-    // Display the text with color depending on the conditions
-    if (profile.pitch_x >= 18.7)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 124, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, pitch_x_str);
-
-    if (profile.pitch_y >= 18.7)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 182, 139, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, pitch_y_str);
-
-    // Check the conditions and display the error text if necessary
-    if (profile.trayOriginX > 99.9 || profile.trayOriginY > 99.9)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-        // Gpu_CoCmd_Text(phost, 160, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Error: Value is above limits!");
-        Gpu_CoCmd_Text(phost, 30, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Error:");
-        Gpu_CoCmd_Text(phost, 265, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Out of range!");
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-
-        // Reset values if they are above 100
-        if (profile.trayOriginX >= 100)
-        {
-            profile.trayOriginX = 99.9;
-        }
-        if (profile.trayOriginY >= 100)
-        {
-            profile.trayOriginY = 99.9;
-        }
-    }
-
-    // Convert input origin values to decimal
-    char trayOriginX_str[10];
-    char trayOriginY_str[10];
-
-    dtostrf(profile.trayOriginX, 4, 1, trayOriginX_str);
-    dtostrf(profile.trayOriginY, 4, 1, trayOriginY_str);
-
-    // Gpu_CoCmd_Text(phost, 125, 174, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, trayOriginX_str);
-    // Gpu_CoCmd_Text(phost, 182, 174, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, trayOriginY_str);
-
-    // Display the text with color depending on the conditions
-    if (profile.trayOriginX > 99.9)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 125, 174, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, trayOriginX_str);
-
-    if (profile.trayOriginY > 99.9)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 182, 174, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, trayOriginY_str);
-
-    // Check the conditions and display the error text if necessary
-    if (profile.Cycles > 99)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-        // Gpu_CoCmd_Text(phost, 160, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Error: Value is above limits!");
-        Gpu_CoCmd_Text(phost, 30, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Error:");
-        Gpu_CoCmd_Text(phost, 265, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "Out of range!");
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-
-        // Reset values if they are above 100
-        if (profile.Cycles >= 100)
-        {
-            profile.Cycles = 99;
-        }
-    }
-    // Gpu_CoCmd_Text(phost, 255, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "%d", profile.Cycles);
-
-    // Change the text color based on the condition
-    if (profile.Cycles > 99)
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 0, 0)); // Change the color to red
-    }
-    else
-    {
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Change the color back to black
-    }
-    Gpu_CoCmd_Text(phost, 255, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, "%d", profile.Cycles);
-    // Gpu_CoCmd_Text(phost, 150, 53, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, (const char *)profile.profileName);
-
-    // Check the conditions and set the flag if necessary
-    if ((profile.Tube_No_x > 13) || (profile.Tube_No_y > 17) || totalTravelDistX > normalTravelDistX || totalTravelDistY > normalTravelDistY || profile.trayOriginX > 99.9 || profile.trayOriginY > 99.9 || profile.Cycles > 99)
-    {
-        disableButtons = true;
-    }
-    else
-    {
-        disableButtons = false;
-    }
+	sprintf(buf,"%d",CurProf.Cycles);
+    Gpu_CoCmd_Text(phost, 255, 104, 21, OPT_CENTER | OPT_RIGHTX | OPT_FORMAT, buf);
 
     App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
     App_WrCoCmd_Buffer(phost, TAG_MASK(1));
     Gpu_CoCmd_FgColor(phost, 0x00A2E8);
 
     // Load Button
-    App_WrCoCmd_Buffer(phost, TAG_MASK(disableButtons ? 0 : 1)); // Enable or disable based on the flag
+    //App_WrCoCmd_Buffer(phost, TAG_MASK(disableButtons ? 0 : 1)); // Enable or disable based on the flag
     App_WrCoCmd_Buffer(phost, TAG(11));
     Gpu_CoCmd_Button(phost, 116, 205, 76, 26, 21, 0, "Load");
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
 
     // Save Button
-    App_WrCoCmd_Buffer(phost, TAG_MASK(disableButtons ? 0 : 1)); // Enable or disable based on the flag
+    //App_WrCoCmd_Buffer(phost, TAG_MASK(disableButtons ? 0 : 1)); // Enable or disable based on the flag
     App_WrCoCmd_Buffer(phost, TAG(12));
     Gpu_CoCmd_Button(phost, 8, 205, 76, 26, 21, 0, "Save");
-    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
+ 
 
-    // Advance Button
-//    App_WrCoCmd_Buffer(phost, TAG_MASK(disableButtons ? 0 : 1)); // Enable or disable based on the flag
-//    App_WrCoCmd_Buffer(phost, TAG(800)); //disable advanced button
-//    Gpu_CoCmd_Button(phost, 233, 205, 76, 26, 21, 0, "Advanced");
-//    App_WrCoCmd_Buffer(phost, TAG_MASK(0));
-
+	
+	App_WrCoCmd_Buffer(phost, TAG(CONFIGADVANCE)); //disable advanced button	
+	Gpu_CoCmd_Button(phost, 233, 205, 76, 26, 21, 0 , "Advanced");
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0));
     Disp_End(phost);
+
 }
+
+void Round1Dec(float *x)
+{
+	char buf[PROFILE_NAME_MAX_LEN];
+
+	dtostrf(*x,3,1,buf);
+	*x=atof(buf);
+}
+
+
+
+void Config_Settings(Gpu_Hal_Context_t *phost)
+{
+	bool wait4key=TRUE;
+	uint8_t keypressed;
+	char buf[PROFILE_NAME_MAX_LEN];
+	float maxval=0;
+	int i;
+	
+	do{
+		keypressed = GetKeyPressed();
+
+		if(keypressed>0)
+		{
+			WaitKeyRelease();
+			switch(keypressed)
+			{
+	    		case 6: // Home button
+						Serial.println("Button Pressed: HOME");
+						//delay(500);
+						//while( Gpu_Hal_Rd32(phost, REG_TOUCH_SCREEN_XY) != 0x80008000);
+						keypressed=0;
+						wait4key=FALSE;
+						break;
+				case 11: // Load (Config Screen)
+						 Serial.println("Button Pressed: LOAD");
+						 keypressed=0;
+
+						 if(strcmp(CurProf.profileName,"xqreset")==0) 
+						 {//special mode to preload eeprom
+							Dprint("write preset data to eeprom");
+							if(CurProfNum==0)
+							{						
+								for(i=1;i<MAX_PROFILES;i++) 
+								{
+									sprintf(CurProf.profileName,"%s %d","Profile",i+1);
+									WriteProfileEEPROM(i,CurProf);
+								}
+							}
+							else PreLoadEEPROM();
+							sprintf(CurProf.profileName,"EEprom reseted"); 
+							DisplayConfig(phost);
+							delay(3000);
+							sprintf(CurProf.profileName,"Profile 1 "); 
+							DisplayConfig(phost);
+						 }
+						 if(strcmp(CurProf.profileName,"xqver")==0) 
+						 {//special mode to preload eeprom
+							Dprint("show version");
+							sprintf(CurProf.profileName,"version : %s",FWVER); 
+							DisplayConfig(phost);
+							delay(3000);
+							sprintf(CurProf.profileName,"xqver "); 
+							DisplayConfig(phost);
+							
+						 }
+						 if(strcmp(CurProf.profileName,"xqhome")==0) 
+						 {//special mode to preload eeprom
+							Dprint("home");
+							Homing();
+							DisplayConfig(phost);
+							
+						 }
+						 if(strcmp(CurProf.profileName,"xqblank")==0) 
+						 {//special mode to preload eeprom
+							Dprint("blankeeprom");
+							BlankEEPROM();
+							sprintf(CurProf.profileName,"EEprom blank"); 
+							DisplayConfig(phost);
+							delay(3000);
+							sprintf(CurProf.profileName,"xqblank "); 
+							DisplayConfig(phost);
+							delay(3000);
+							
+						 }
+						 Profile_Menu(&host);
+						 DisplayConfig(phost);
+						 //wait4key=FALSE;
+						 break;
+				case CONFIGADVANCE: // Advavanced button
+		          		  Serial.println("Button Pressed: ADVANCED");
+						  keypressed=0;
+		            		//            confirmAdvanceSetting(phost);
+ 		            	  Tray_Screen(phost, CurProf);
+						  //Dprint("returntray","\n");
+						  DisplayConfig(phost);
+						  //wait4key=FALSE;
+		            	  break;
+		        case 12:
+		                   Serial.println("Button Pressed: SAVE");
+						   keypressed=0;
+						   Dprint("curprofnum=",CurProfNum);
+						   WriteCurIDEEPROM(CurProfNum);
+						   WriteProfileEEPROM(CurProfNum,CurProf);
+						   strcpy(buf,CurProf.profileName); 
+						   strcpy(CurProf.profileName,"Profile saved");
+						   DisplayConfig(phost);
+						   delay(3000);
+						   strcpy(CurProf.profileName,buf); 
+						   wait4key=FALSE;
+						   break;
+		        case 13:
+				            Serial.println("Button Pressed: PROFILE");
+							keypressed=0;
+		            		Keyboard(phost,CurProf.profileName,"Enter Profile Name",FALSE);
+							DisplayConfig(phost);
+		    		        break;
+
+		        case 14: //no. of Tubes row
+						keypressed=0;
+						maxval=(int)((MAXXMM-CurProf.trayOriginX)/CurProf.pitch_x)+1;
+						if(maxval>MAXNUMX) maxval=MAXNUMX;
+						
+						Dprint("max val=",maxval);
+						CurProf.Tube_No_x=Keypad(&host, CurProf.Tube_No_x, MINNUMX,maxval,FALSE);
+						DisplayConfig(phost);
+		                break;
+		        case 15://no. of Tubes col
+						keypressed=0;
+						maxval=(int)((MAXYMM-CurProf.trayOriginY)/CurProf.pitch_y)+1;
+						if(maxval>MAXNUMY) maxval=MAXNUMY;
+						Dprint("max val=",maxval);
+						CurProf.Tube_No_y=Keypad(&host, CurProf.Tube_No_y, MINNUMY,maxval,FALSE);
+						DisplayConfig(phost);
+		                break;
+		        case 16://pitch row
+						keypressed=0;
+						if(CurProf.Tube_No_x==0) maxval=MAXXMM-CurProf.trayOriginX;
+						else maxval=(MAXXMM-CurProf.trayOriginX)/(CurProf.Tube_No_x-1);
+						Round1Dec(&maxval);
+						Dprint("max val=",maxval);
+						if(maxval>MAXPITCHX) maxval=MAXPITCHX;
+						CurProf.pitch_x=Keypad(&host, CurProf.pitch_x, MINPITCHX,maxval,TRUE);
+						DisplayConfig(phost);
+		                break;
+		        case 17://pitch col
+						keypressed=0;
+						if(CurProf.Tube_No_y==0) maxval=MAXYMM-CurProf.trayOriginY;
+						else maxval=(MAXYMM-CurProf.trayOriginY)/(CurProf.Tube_No_y-1);
+						Round1Dec(&maxval);
+						if(maxval>MAXPITCHY) maxval=MAXPITCHY;
+						Dprint("max val=",maxval);
+						CurProf.pitch_y=Keypad(&host, CurProf.pitch_y, MINPITCHY,maxval,TRUE);
+						DisplayConfig(phost);
+		                break;
+		        case 18://origin row
+						keypressed=0;
+						if(CurProf.Tube_No_x==0) maxval=MAXXMM;
+						else maxval=MAXXMM-(CurProf.pitch_x*(CurProf.Tube_No_x-1));
+						Round1Dec(&maxval);
+						if(maxval>MAXORGX) maxval=MAXORGX;
+						Dprint("max val=",maxval);
+						CurProf.trayOriginX=Keypad(&host, CurProf.trayOriginX, 0,maxval,TRUE);
+						DisplayConfig(phost);
+		                break;
+		        case 19://origin col
+						keypressed=0;
+						if(CurProf.Tube_No_y==0) maxval=MAXYMM;
+						else maxval=MAXYMM-(CurProf.pitch_y*(CurProf.Tube_No_y-1));
+						Round1Dec(&maxval);
+						if(maxval>MAXORGY) maxval=MAXORGY;
+						Dprint("max val=",maxval);
+						CurProf.trayOriginY=Keypad(&host, CurProf.trayOriginY, 0, maxval,TRUE);
+						DisplayConfig(phost);
+		                break;
+		        case 20:
+						keypressed=0;
+						CurProf.Cycles=Keypad(&host, CurProf.Cycles, MINCYCLE,MAXCYCLE,FALSE);
+						DisplayConfig(phost);
+		                break;
+
+			    case 25:
+				 		keypressed=0;
+          		  	  	CurProf.vibrationEnabled = !CurProf.vibrationEnabled; // Toggle the state
+						DisplayConfig(phost);
+	            		break;
+		    	//case 246: // No button for Advanced Setting
+		        //	  			keypressed=0;
+				//		  		DisplayConfig(phost);
+		        //    			break;
+		          
+			    //case 247: // Yes button for Advanced Setting
+				//		        keypressed=0;
+			     //   		    Tray_Screen(phost, CurProf);
+		        //	    		break;
+				default: 	keypressed=0;
+					  			break;
+			}
+			//if(wait4key) while( GetKeyPressed()>0);
+		}
+		
+	 }while(wait4key);
+}
+
 
 void confirmAdvanceSetting(Gpu_Hal_Context_t *phost)
 {
@@ -1567,252 +1317,184 @@ void confirmAdvanceSetting(Gpu_Hal_Context_t *phost)
 
     Disp_End(phost);
 }
-
-// Numeric Key
-void Keyboard(Gpu_Hal_Context_t *phost, Profile &profile, int32_t tube_no_x, int32_t tube_no_y, float pitch_row_x, float pitch_col_y, float trayOriginX_row, float trayOriginY_col, int32_t cyclesNo)
+void DisplayKeypad(Gpu_Hal_Context_t *phost, int32_t keypressed,char* displaynum,int8_t errorcode)
 {
-    delay(50); // Added to create smooth transition between screen
-    PageNum = 3;
-    phost = &host;
-    /*local variables*/
-    uint8_t Line = 0;
-    uint16_t Disp_pos = 0;
-    int32_t Read_sfk = 0, tval;
-    uint16_t noofchars = 0, line2disp = 0, nextline = 0;
+	char buf[KEYPAD_MAX_LEN+20];
 
-    char tube_no_x_str[MAX_CHAR_PER_LINE];
-    char tube_no_y_str[MAX_CHAR_PER_LINE];
-    char pitch_row_x_str[MAX_CHAR_PER_LINE];
-    char pitch_col_y_str[MAX_CHAR_PER_LINE];
-    char trayOriginX_row_str[MAX_CHAR_PER_LINE];
-    char trayOriginY_col_str[MAX_CHAR_PER_LINE];
-    char cyclesNo_str[MAX_CHAR_PER_LINE];
+    Gpu_CoCmd_Dlstart(phost);
+    App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(120, 120, 120));
+    App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+    App_WrCoCmd_Buffer(phost, TAG_MASK(1)); // enable tagbuffer updation
+	//Gpu_CoCmd_FgColor(phost, 0xB40000);     // 0x703800 0xD00000
+  	//Gpu_CoCmd_BgColor(phost, 0xB40000);
+	Gpu_CoCmd_FgColor(phost, 0x202020);
+	Gpu_CoCmd_BgColor(phost, 0x202020);
 
-    // Clear Linebuffer
-    //tube_no_x_str[0]=0;
-   // tube_no_y_str[0]=0;
-    //pitch_row_x_str[0]=0;
-   // pitch_col_y_str[0]=0;
-   // trayOriginX_row_str[0]=0;
-  //  trayOriginY_col_str[0]=0;
-  //  cyclesNo_str[0]=0;
-    for (tval = 0; tval < MAX_LINES; tval++)
-		//Buffer.notepad[tval][0]=0;//try014b
-        memset(&Buffer.notepad[tval], '\0', sizeof(Buffer.notepad[tval]));//try014b
+	Gpu_CoCmd_FgColor(phost, 0x00a2e8);
+    App_WrCoCmd_Buffer(phost, TAG(BACK)); // Back		 Return to Home
+    Gpu_CoCmd_Button(phost, 207, 37, 67, 46, font, (keypressed==BACK)? OPT_FLAT :0 , "Back");
 
-    /*intial setup*/
-    Line = 0;                                                   // Starting line
-    Disp_pos = LINE_STARTPOS;                                   // starting pos
-    Flag.Numeric = ON;                                          // Disable the numbers and spcial charaters
+	Gpu_CoCmd_FgColor(phost, 0xADAF3C);
+    App_WrCoCmd_Buffer(phost, TAG(BACK_SPACE)); // BackSpace
+    Gpu_CoCmd_Button(phost, 207, 87, 67, 50, 31, (keypressed==BACK_SPACE)? OPT_FLAT :0 , "<-");
 
-    memset((Buffer.notepad[Line] + 0), ' ', 1);                 // For Cursor
+	Gpu_CoCmd_FgColor(phost, 0x006400);
+    App_WrCoCmd_Buffer(phost, TAG(NUM_ENTER)); // Enter
+    Gpu_CoCmd_Button(phost, 207, 141, 67, 90, font, (keypressed==NUM_ENTER)? OPT_FLAT :0 , "Enter");
 
-    Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][0], Font); // Update the Disp_Pos
-    noofchars += 1;                                             // for cursor
-                                                                /*enter*/
-    Flag.Exit = 0;
-	delay(500);//soon
+	Gpu_CoCmd_FgColor(phost, 0x202020);
+	Gpu_CoCmd_BgColor(phost, 0x202020);
 
-    do
-    {
-        Read_sfk = Read_Keypad(); // read the keys
+    Gpu_CoCmd_Keys(phost, 47, 35, 150, 50, 29, keypressed, "789");
+    Gpu_CoCmd_Keys(phost, 47, 88, 150, 50, 29, keypressed, "456");
+    Gpu_CoCmd_Keys(phost, 47, 140, 150, 50, 29, keypressed, "123");
+    Gpu_CoCmd_Keys(phost, 47, 191, 150, 40, 29, keypressed, "0.");
 
-        if (Flag.Key_Detect)
-        {                        // check if key is pressed
-            Flag.Key_Detect = 0; // clear it
-            if (Read_sfk >= SPECIAL_FUN)
-            { // check any special function keys are pressed
-                switch (Read_sfk)
-                {
-                case BACK_SPACE:
-                    if (noofchars > 1) // check in the line there is any characters are present,cursor not include
-                    {
-                        noofchars -= 1;                                                             // clear the character inthe buffer
-                        Disp_pos -= Gpu_Rom_Font_WH(*(Buffer.notepad[Line] + noofchars - 1), Font); // Update the Disp_Pos
-                    }
-                    else
-                    {
-                        if (Line >= (MAX_LINES - 1))
-                            Line--;
-                        else
-                            Line = 0;                                                      // check the lines
-                        noofchars = strlen(Buffer.notepad[Line]);                          // Read the len of the line
-                        for (tval = 0; tval < noofchars; tval++)                           // Compute the length of the Line
-                            Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][tval], Font); // Update the Disp_Pos
-                    }
-                    Buffer.temp = (Buffer.notepad[Line] + noofchars); // load into temporary buffer
-                    Buffer.temp[-1] = ' ';                            // update the string
-                    Buffer.temp[0] = '\0';
-                    break;
-                }
-            }
-            else
-            {
-                Disp_pos += Gpu_Rom_Font_WH(Read_sfk, Font);                       // update dispos Font
+    
+	App_WrCoCmd_Buffer(phost, TAG_MASK(0)); // Disable the tag buffer updates
+	App_WrCoCmd_Buffer(phost, SCISSOR_XY(0, 0));
+	App_WrCoCmd_Buffer(phost, SCISSOR_SIZE(320, 34));
+	
+	App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(0,0,0));
+	App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255)); // Text Color
 
-                Buffer.temp = Buffer.notepad[Line] + strlen(Buffer.notepad[Line]); // load into temporary buffer
-                Buffer.temp[-1] = Read_sfk;                                        // update the string
-                Buffer.temp[0] = ' ';
-                Buffer.temp[1] = '\0';
-                noofchars = strlen(Buffer.notepad[Line]); // get the string len
-                if (Disp_pos > LINE_ENDPOS)               // check if there is place to put a character in a specific line
-                {
-                    Buffer.temp = Buffer.notepad[Line] + (strlen(Buffer.notepad[Line]) - 1);
-                    Buffer.temp[0] = '\0';
-                    noofchars -= 1;
-                    Disp_pos = LINE_STARTPOS;
-                    Line++;
-                    if (Line >= MAX_LINES)
-                        Line = 0;
+    //App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+    if(errorcode)
+		sprintf(buf,"%s  %s",displaynum,"out of range");
+	else
+		sprintf(buf,displaynum);
+	Gpu_CoCmd_Text(phost, 0, 0, 30, 0, buf);
 
-                    memset((Buffer.notepad[Line]), '\0', sizeof(Buffer.notepad[Line])); // Clear the line buffer
+    App_WrCoCmd_Buffer(phost, DISPLAY());
+    Gpu_CoCmd_Swap(phost);
+    App_Flush_Co_Buffer(phost);
 
-
-                    for (; noofchars >= 1; noofchars--, tval++)
-                    {
-                        if (Buffer.notepad[Line - 1][noofchars] == ' ' || Buffer.notepad[Line - 1][noofchars] == '.') // In case of space(New String) or end of statement(.)
-                        {
-                            memset(Buffer.notepad[Line - 1] + noofchars, '\0', 1);
-                            noofchars += 1; // Include the space
-                            memcpy(&Buffer.notepad[Line], (Buffer.notepad[Line - 1] + noofchars), tval);
-
-
-                            break;
-                        }
-                    }
-                    noofchars = strlen(Buffer.notepad[Line]);
-                    Buffer.temp = Buffer.notepad[Line] + noofchars;
-                    Buffer.temp[0] = ' ';
-                    Buffer.temp[1] = '\0';
-                    for (tval = 0; tval < noofchars; tval++)
-                        Disp_pos += Gpu_Rom_Font_WH(Buffer.notepad[Line][tval], Font); // Update the Disp_Pos
-                }
-            }
-        }
-        // Display List start
-        Gpu_CoCmd_Dlstart(phost);
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(120, 120, 120));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, TAG_MASK(1)); // enable tagbuffer updation
-        Gpu_CoCmd_FgColor(phost, 0xB40000);     // 0x703800 0xD00000
-        Gpu_CoCmd_BgColor(phost, 0xB40000);
-
-        But_opt = (Read_sfk == BACK) ? OPT_FLAT : 0; // button color change if the button during press
-
-        if (Read_sfk == BACK)
-        {
-            Config_Settings(phost, tube_no_x, tube_no_y, pitch_row_x, pitch_col_y, trayOriginX_row, trayOriginY_col, cyclesNo, profile);
-            break;
-        }
-        App_WrCoCmd_Buffer(phost, TAG(BACK)); // Back		 Return to Home
-        Gpu_CoCmd_Button(phost, 207, 112, 67, 50, font, But_opt, "Back");
-
-        But_opt = (Read_sfk == BACK_SPACE) ? OPT_FLAT : 0;
-        App_WrCoCmd_Buffer(phost, TAG(BACK_SPACE)); // BackSpace
-        Gpu_CoCmd_Button(phost, 207, 181, 67, 50, font, But_opt, "Del");
-
-        But_opt = (Read_sfk == NUM_ENTER) ? OPT_FLAT : 0;
-        App_WrCoCmd_Buffer(phost, TAG(NUM_ENTER)); // Enter
-        Gpu_CoCmd_Button(phost, 207, 36, 67, 50, font, But_opt, "Enter");
-
-        if (Read_sfk == 247)
-        {
-
-            if (TubeRowTag == true)
-            {
-                strncpy(tube_no_x_str, Buffer.notepad[0], MAX_CHAR_PER_LINE); // Copy inputted text to tube_no_str
-                tube_no_x_str[MAX_CHAR_PER_LINE] = '\0';                      // Ensure null-terminated
-                int32_t tube_no_x = atoi(tube_no_x_str);                      // Convert inputted text to integer value
-                profile.Tube_No_x = tube_no_x;                                // Update Tube_No_x parameter in profile
-                // Serial.println("tube_no_x:");
-                // Serial.println(tube_no_x);
-            }
-
-            if (TubeColumnTag == true)
-            {
-                strncpy(tube_no_y_str, Buffer.notepad[0], MAX_CHAR_PER_LINE);
-                tube_no_y_str[MAX_CHAR_PER_LINE] = '\0';
-                int32_t tube_no_y = atoi(tube_no_y_str);
-                profile.Tube_No_y = tube_no_y;
-            }
-
-            if (PitchRowTag == true)
-            {
-                strncpy(pitch_row_x_str, Buffer.notepad[0], MAX_CHAR_PER_LINE);
-                pitch_row_x_str[MAX_CHAR_PER_LINE] = '\0';
-                float pitch_row_x = atof(pitch_row_x_str);
-                profile.pitch_x = pitch_row_x;
-            }
-
-            if (PitchColumnTag == true)
-            {
-                strncpy(pitch_col_y_str, Buffer.notepad[0], MAX_CHAR_PER_LINE);
-                pitch_col_y_str[MAX_CHAR_PER_LINE] = '\0';
-                float pitch_col_y = atof(pitch_col_y_str);
-                profile.pitch_y = pitch_col_y;
-            }
-
-            if (OriginRowTag == true)
-            {
-                strncpy(trayOriginX_row_str, Buffer.notepad[0], MAX_CHAR_PER_LINE);
-                trayOriginX_row_str[MAX_CHAR_PER_LINE] = '\0';
-                float trayOriginX_row = atof(trayOriginX_row_str);
-                profile.trayOriginX = trayOriginX_row;
-            }
-
-            if (OriginColumnTag == true)
-            {
-                strncpy(trayOriginY_col_str, Buffer.notepad[0], MAX_CHAR_PER_LINE);
-                trayOriginY_col_str[MAX_CHAR_PER_LINE] = '\0';
-                float trayOriginY_col = atof(trayOriginY_col_str);
-                profile.trayOriginY = trayOriginY_col;
-            }
-
-            if (CyclesTag == true)
-            {
-                strncpy(cyclesNo_str, Buffer.notepad[0], MAX_CHAR_PER_LINE);
-                cyclesNo_str[MAX_CHAR_PER_LINE] = '\0';
-                int32_t cyclesNo = atoi(cyclesNo_str);
-                profile.Cycles = cyclesNo;
-            }
-            Config_Settings(phost, tube_no_x, tube_no_y, pitch_row_x, pitch_col_y, trayOriginX_row, trayOriginY_col, cyclesNo, profile);
-            break;
-        }
-
-        if (Flag.Numeric == ON)
-        {
-            Gpu_CoCmd_Keys(phost, 47, 35, 150, 50, 29, Read_sfk, "789");
-            Gpu_CoCmd_Keys(phost, 47, 88, 150, 50, 29, Read_sfk, "456");
-            Gpu_CoCmd_Keys(phost, 47, 140, 150, 50, 29, Read_sfk, "123");
-            Gpu_CoCmd_Keys(phost, 47, 191, 150, 40, 29, Read_sfk, "0.");
-        }
-        App_WrCoCmd_Buffer(phost, TAG_MASK(0)); // Disable the tag buffer updates
-        App_WrCoCmd_Buffer(phost, SCISSOR_XY(0, 0));
-        App_WrCoCmd_Buffer(phost, SCISSOR_SIZE(320, 25));
-
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, CLEAR(1, 1, 1));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 0)); // Text Color
-        line2disp = 0;
-		//if(Buffer.notepad[line2disp][0]!=0) Buffer.notepad[line2disp][0] =0;//try013
-
-
-        while (line2disp <= Line)
-        {
-            // nextline = 3 + (line2disp * (DispHeight * .073));
-            
-            Gpu_CoCmd_Text(phost, line2disp, nextline, font, 0, (const char *)&Buffer.notepad[line2disp]);
-            line2disp++;
-            tempvarx = ((const char *)&Buffer.notepad[line2disp]);
-        }
-        App_WrCoCmd_Buffer(phost, DISPLAY());
-        Gpu_CoCmd_Swap(phost);
-        App_Flush_Co_Buffer(phost);
-    } while (1);
 }
 
-void displayTextMatrixName()
+void LoadBuffer( char *buf, float curval)
+{
+	float temp;
+
+	temp=(int8_t)curval;
+	if(curval-temp>0)
+	{
+		dtostrf(curval,3,1,buf);
+	}
+	else
+		sprintf(buf,"%d",(int16_t)curval);
+
+}
+
+float Keypad(Gpu_Hal_Context_t *phost, float curval, float minval, float maxval ,bool isfloat)
+{
+    phost = &host;
+    uint8_t keypressed = 0;
+	bool wait4key=TRUE;
+
+	char buf[KEYPAD_MAX_LEN+1];
+	int8_t curpos;
+	float tempval;
+
+	for(int i=0;i<10;i++) buf[i]=0;
+	LoadBuffer(buf, curval);
+	curpos=strlen(buf);
+	buf[curpos]=0;
+
+	Dprint("T112");
+	Dprint(buf[0]);
+	Dprint(buf[1]);
+	Dprint(buf[2]);
+	Dprint(buf[3]);
+	Dprint(buf[4]);
+
+        // Display List start
+	DisplayKeypad(phost,keypressed,buf,0);
+	Dprint(curpos);
+
+	do{
+		keypressed = GetKeyPressed();
+
+		if(keypressed>0)
+		{
+			//Dprintln(keypressed);
+			DisplayKeypad(phost,keypressed,buf,0);
+			WaitKeyRelease();
+			Dprint("T10");
+			switch(keypressed)
+			{
+				case BACK_SPACE:    if(curpos>=0)
+									{
+										if(curpos>0) curpos--;
+										buf[curpos]=0;									
+										Dprint(curpos);
+									}
+									keypressed=0;
+									Dprint("T11");
+									break;
+				case NUM_ENTER: keypressed=0;
+								wait4key=FALSE;
+								break;
+				case BACK: 	keypressed=0;
+							wait4key=FALSE;
+							LoadBuffer(buf,curval);
+							break;
+				default: 	if(curpos<KEYPAD_MAX_LEN-1)
+							{
+								Dprint(curpos);
+								buf[curpos]=keypressed;
+								buf[++curpos]=0;
+								keypressed=0;
+							}
+							else
+							{//max entry
+								DisplayKeypad(phost,keypressed,buf,1);
+							}
+							break;
+									
+									
+			}
+			Dprint(buf[0]);
+			Dprint(buf[1]);
+			Dprint(buf[2]);
+			Dprint(buf[3]);
+			Dprint(buf[4]);
+			if(!wait4key)
+			{
+				tempval=atof(buf);
+				Dprint("tempval=",tempval);
+				if(tempval<minval || tempval>maxval)
+				{//out of range error
+					DisplayKeypad(phost,keypressed,buf,1);
+					delay(2000);
+					if(tempval>maxval) LoadBuffer(buf,maxval);
+					else LoadBuffer(buf,minval);
+					curpos=strlen(buf);
+					DisplayKeypad(phost,keypressed,buf,0);
+					wait4key=TRUE;//error re enter again
+					
+				}
+				else
+				{
+					curval=tempval;//accept entry
+					LoadBuffer(buf,curval);
+					DisplayKeypad(phost,keypressed,buf,0);
+				}
+			}
+			else 
+			{
+				DisplayKeypad(phost,keypressed,buf,0);
+			}
+			if(wait4key) WaitKeyRelease();
+		}
+		
+	}while(wait4key);
+
+	return curval;
+}
+
+void displayTextMatrixName(int startRow, int startCol)
 {
     int id;
 
@@ -1857,78 +1539,71 @@ void displayTextMatrixName()
 
     Gpu_CoCmd_Text(phost, 280, 230, 20, OPT_CENTER, matrixName.c_str()); // Display matrix name
 }
-
 void toggleButton(Gpu_Hal_Context_t *phost, Profile &profile, int tag, int x, int y, int buttonSize, int row, int col, int i, int j)
 {
-    bool buttonState = profile.buttonStates[row - 1][col - 1];
+    bool buttonState = profile.buttonStates[col - 1][row - 1];
+	char buf[10];
 
     App_WrCoCmd_Buffer(phost, BEGIN(FTPOINTS));
     App_WrCoCmd_Buffer(phost, POINT_SIZE(buttonSize * 10));
 
+	//Dprint("x=",x);
+	//Dprint("y=",y);
+	App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 127));
+	if (i == 0) // First column on each page
+	{
+		sprintf(buf, "C%d",col);
+		Gpu_CoCmd_Text(phost, x+20, y , 20, OPT_CENTER, buf);
+	}
+	if (j == 0) // First row on each page
+	{
+		sprintf(buf, "R%d",row);
+		Gpu_CoCmd_Text(phost, x , y-18, 20, OPT_CENTER, buf);
+	}
+
+    App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
     if (buttonState)
-    {
-        // If button state is OFF
-        App_WrCoCmd_Buffer(phost, BEGIN(FTPOINTS));
-        App_WrCoCmd_Buffer(phost, POINT_SIZE(buttonSize * 10));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(200, 0, 0)); // Display red circle
-        App_WrCoCmd_Buffer(phost, TAG(tag));
-        Gpu_CoCmd_Track(phost, x + buttonSize / 2, y + buttonSize / 2, 0, 0, tag); // Enable touch tracking for TAG
-        App_WrCoCmd_Buffer(phost, VERTEX2II(x, y, 0, 0));
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Text(phost, x, y, 20, OPT_CENTER, "OFF");
-
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 255));
-
-        if (i == 0) // First column on each page
-        {
-            String colStr = "C" + String(col);
-            Gpu_CoCmd_Text(phost, x, y - 16, 20, OPT_CENTER, colStr.c_str());
-        }
-
-        if (j == 0) // First row on each page
-        {
-            String rowStr = "R" + String(row);
-            Gpu_CoCmd_Text(phost, x - 16, y, 20, OPT_CENTER, rowStr.c_str());
-        }
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, END());
-    }
-    else
     {
         // If button state is ON
         App_WrCoCmd_Buffer(phost, BEGIN(FTPOINTS));
-        App_WrCoCmd_Buffer(phost, POINT_SIZE(buttonSize * 10));
+        App_WrCoCmd_Buffer(phost, POINT_SIZE(200));//buttonSize * 10));
         App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 128, 0)); // Display green circle
         App_WrCoCmd_Buffer(phost, TAG(tag));
-        Gpu_CoCmd_Track(phost, x + buttonSize / 2, y + buttonSize / 2, 0, 0, tag); // Enable touch tracking for TAG
-        App_WrCoCmd_Buffer(phost, VERTEX2II(x, y, 0, 0));
+        Gpu_CoCmd_Track(phost, x + 22 + buttonSize / 2, y - 18 + buttonSize / 2, 0, 0, tag); // Enable touch tracking for TAG
+        App_WrCoCmd_Buffer(phost, VERTEX2II(x+22, y - 18, 0, 0));
         App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Text(phost, x, y, 20, OPT_CENTER, "ON");
+        Gpu_CoCmd_Text(phost, x+22, y - 18, 20, OPT_CENTER, "ON");
 
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(0, 0, 255));
 
-        if (i == 0) // First column on each page
-        {
-            String colStr = "C" + String(col);
-            Gpu_CoCmd_Text(phost, x, y - 16, 20, OPT_CENTER, colStr.c_str());
-        }
-
-        if (j == 0) // First row on each page
-        {
-            String rowStr = "R" + String(row);
-            Gpu_CoCmd_Text(phost, x - 16, y, 20, OPT_CENTER, rowStr.c_str());
-        }
-        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
-        App_WrCoCmd_Buffer(phost, END());
     }
+	else
+    {
+        // If button state is OFF
+        App_WrCoCmd_Buffer(phost, BEGIN(FTPOINTS));
+        App_WrCoCmd_Buffer(phost, POINT_SIZE(200));
+        App_WrCoCmd_Buffer(phost, COLOR_RGB(200, 0, 0)); // Display red circle
+        App_WrCoCmd_Buffer(phost, TAG(tag));
+        Gpu_CoCmd_Track(phost, x + 22 + buttonSize / 2, y -18 + buttonSize / 2, 0, 0, tag); // Enable touch tracking for TAG
+        App_WrCoCmd_Buffer(phost, VERTEX2II(x+22, y - 18, 0, 0));
+        App_WrCoCmd_Buffer(phost, COLOR_RGB(255, 255, 255));
+        Gpu_CoCmd_Text(phost, x+22, y - 18, 20, OPT_CENTER, "OFF");
+    }
+
+
+
+    App_WrCoCmd_Buffer(phost, END());
 }
 
 void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
 {
-    initializeProfile(profile);
+	char buf[10];
+	bool showonce=FALSE;
+	uint8_t touch_tag;
 
-//    profile.profileId = getLastUsedProfileId();
-    getLastUsedProfileName();
+
+	int32_t startRow = 1;
+	int32_t startCol = 1;
+
 
     profile.Tube_No_x = min(profile.Tube_No_x, 13);
     profile.Tube_No_y = min(profile.Tube_No_y, 17);
@@ -1937,6 +1612,7 @@ void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
 
     const int maxRowsPerPage = 7;
     const int maxColsPerPage = 7;
+
 
     int numRows = minimum(minimum(profile.Tube_No_y, maxRowsPerPage), 17);
     int numCols = minimum(minimum(profile.Tube_No_x, maxColsPerPage), 13);
@@ -1950,17 +1626,21 @@ void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
     int currentColPage = 0;
 
     // Calculate button size and gaps once and use them on subsequent pages to mantain the same buttonsize across all pages
-    int32_t buttonSize = min((240 - ((numCols + 1) * 16)) / numCols, (240 - ((numRows + 1) * 16)) / numRows);
-    int32_t rowGap = (240 - (numRows * buttonSize)) / (numRows + 1);
-    int32_t colGap = (240 - (numCols * buttonSize)) / (numCols + 1);
+    int32_t buttonSize = 20;//min((240 - ((numCols + 1) * 16)) / numCols, (240 - ((numRows + 1) * 16)) / numRows);
+    int32_t rowGap = 12;//(240 - (numRows * buttonSize)) / (numRows + 1);
+    int32_t colGap = 12;//(240 - (numCols * buttonSize)) / (numCols + 1);
 
+	
+	
     // Calculate starting position for buttons
-    int32_t startX = (STARTPOS - ((numCols * (buttonSize + colGap)) - colGap)) / 2;
-    int32_t startY = (STARTPOS - ((numRows * (buttonSize + rowGap)) - rowGap)) / 2;
+    int32_t startX = 10;//26;//(STARTPOS - ((numCols * (buttonSize + colGap)) - colGap)) / 2;
+    int32_t startY = 230;//26;// (STARTPOS - ((numRows * (buttonSize + rowGap)) - rowGap)) / 2;
+
+
 
     while (1)
     {
-        uint8_t touch_tag = Gpu_Hal_Rd8(phost, REG_TOUCH_TAG);
+        touch_tag = GetKeyPressed();
 
         Gpu_CoCmd_FlashFast(phost, 0);
         Gpu_CoCmd_Dlstart(phost);
@@ -1976,47 +1656,47 @@ void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
         App_WrCoCmd_Buffer(phost, LINE_WIDTH(16));
         App_WrCoCmd_Buffer(phost, BEGIN(RECTS));
         App_WrCoCmd_Buffer(phost, VERTEX2F(0, 0));
-        App_WrCoCmd_Buffer(phost, VERTEX2F(3840, 3840));
+        //App_WrCoCmd_Buffer(phost, VERTEX2F(3840, 3840));
         App_WrCoCmd_Buffer(phost, END());
 
-        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-        App_WrCoCmd_Buffer(phost, TAG(11));
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 248, 90, 62, 26, 21, 0, "Load"); // Tray Load button
+        //Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+        //App_WrCoCmd_Buffer(phost, TAG(11));
+        //App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
+        //Gpu_CoCmd_Button(phost, 248, 90, 62, 26, 21, 0, "Load"); // Tray Load button
 
-        Gpu_CoCmd_FgColor(phost, 0x00A2E8);
-        App_WrCoCmd_Buffer(phost, TAG(21));
-        App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 248, 46, 62, 26, 21, 0, "Save"); // Tray Save button
+        //Gpu_CoCmd_FgColor(phost, 0x00A2E8);
+        //App_WrCoCmd_Buffer(phost, TAG(21));
+        //App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
+        //Gpu_CoCmd_Button(phost, 248, 46, 62, 26, 21, 0, "Save"); // Tray Save button
 
         Gpu_CoCmd_FgColor(phost, 0x00A2E8);
         App_WrCoCmd_Buffer(phost, TAG(22));
         App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 248, 0, 62, 26, 21, 0, "Home"); // Tray Home button
+        Gpu_CoCmd_Button(phost, 248, 0, 62, 26, 21, 0, "Back"); // Tray Home button
 
         // Draw Left navigation buttons
         Gpu_CoCmd_FgColor(phost, 0x00A2E8);
         App_WrCoCmd_Buffer(phost, TAG(23));
         App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 248, 178, 20, 20, 21, 0, "<"); // Previous page button
+        Gpu_CoCmd_Button(phost, 248, 160, 25, 25, 24, (touch_tag==23)? OPT_FLAT :0 , "<"); // Previous page button
 
         // Draw right navigation buttons
         Gpu_CoCmd_FgColor(phost, 0x00A2E8);
         App_WrCoCmd_Buffer(phost, TAG(24));
         App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 288, 178, 20, 20, 21, 0, ">"); // Next page button
+        Gpu_CoCmd_Button(phost, 288, 160, 25, 25, 24, (touch_tag==24)? OPT_FLAT :0, ">"); // Next page button
 
         // Draw up navigation button
         Gpu_CoCmd_FgColor(phost, 0x00A2E8);
         App_WrCoCmd_Buffer(phost, TAG(26));
         App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 268, 158, 20, 20, 21, 0, "^");
+        Gpu_CoCmd_Button(phost, 268, 130, 25, 25, 24, (touch_tag==26)? OPT_FLAT :0, "^");
 
         // Draw down navigation button
         Gpu_CoCmd_FgColor(phost, 0x00A2E8);
         App_WrCoCmd_Buffer(phost, TAG(27));
         App_WrCoCmd_Buffer(phost, CLEAR_COLOR_RGB(255, 255, 255));
-        Gpu_CoCmd_Button(phost, 268, 198, 20, 20, 20, 0, "v");
+        Gpu_CoCmd_Button(phost, 268, 190, 25, 25, 24, (touch_tag==27)? OPT_FLAT :0, "v");
 
         // Calculate starting index and ending index for current page
         int startIndex = currentPage * numButtonsPerPage;
@@ -2026,8 +1706,9 @@ void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
         int currentPageCols = minimum(profile.Tube_No_x, numCols);
 
         // Draw buttons for current page
-        int x = startX;
-        int y = startY;
+        int x =startX;
+        int y =startY;
+
         int tag = TAG_START + startIndex; // Start tag at 28 (currentPage * numButtonsPerPage)
         for (int i = 0; i < currentPageRows; i++)
         {
@@ -2039,91 +1720,78 @@ void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
                 {
                     if (touch_tag == tag)
                     {
-                        profile.buttonStates[row - 1][col - 1] = !profile.buttonStates[row - 1][col - 1];
-                        Serial.println("Button at (" + String(row) + ", " + String(col) + ") is now " + (profile.buttonStates[row - 1][col - 1] ? "OFF" : "ON"));
+                        profile.buttonStates[col - 1][row - 1] = !profile.buttonStates[col - 1][row - 1];
+                        Serial.println("Button at (" + String(row) + ", " + String(col) + ") is now " + (profile.buttonStates[col - 1][row - 1] ? "OFF" : "ON"));
                     }
                     toggleButton(phost, profile, tag, x, y, buttonSize, row, col, i, j);
                 }
                 x += buttonSize + colGap;
             }
             x = startX;
-            y += buttonSize + rowGap;
+            y -= buttonSize + rowGap;
         }
-        displayTextMatrixName();
+        displayTextMatrixName(startRow,startCol);
 
-        if (touch_tag == 11) // Load
+ 		if (touch_tag == 22) // Home button
         {
-            // profile.profileId = getLastSavedProfileId();
-//            profile.profileId = getLastUsedProfileId();
-            getLastUsedProfileName();
-//            loadProfile(profile, profile.profileId); // Call the loadProfile() function to load the profile at the given index
-            loadProfile(profile);
-//            Home_Menu(&host, profile);
-            Profile_Menu(&host, profile);
-            break;
-//            return;
-        }
-
-        else if (touch_tag == 21) // Save button
-        {
-//            profile.profileId = getLastUsedProfileId();
-            getLastUsedProfileName();
-//            saveProfile(profile, profile.profileId);
-            saveProfile(profile);
-//            Profile_Menu(phost, profile);
-//            break;
-        }
-
-        else if (touch_tag == 22) // Home button
-        {
-            Home_Menu(&host, profile,MAINMENU);//soon
-            break;
-//            return;
+            //break;
+            return;
         }
 
         else if (touch_tag == 24) // Next page button
         {
-            if (currentColPage < (profile.Tube_No_x / numCols))
-            {
+        	//Dprint(">","\n");
+
+
+            if (currentColPage < ((profile.Tube_No_x / maxColsPerPage) - ((profile.Tube_No_x % maxColsPerPage) ? 0 : 1)))
+			{
+				Dprint("cin");
                 currentColPage++;
                 startCol = currentColPage * numCols + 1;
-//                saveProfile(profile, profile.profileId); // Save profile on navigation
-                saveProfile(profile);
             }
+			delay(50);
+			//Dprint("curcolpage=",currentColPage);
         }
 
         else if (touch_tag == 23) // Previous page button
         {
+        	//Dprint("<","\n");
+
             if (currentColPage > 0)
             {
                 currentColPage--;
                 startCol = currentColPage * numCols + 1;
-//                saveProfile(profile, profile.profileId); // Save profile on navigation
-                saveProfile(profile);  
-                
             }
+			delay(50);
+			//Dprint("curcolpage=",currentColPage);
         }
 
-        else if (touch_tag == 26) // Up button
+        else if (touch_tag == 27) // Up button
         {
+        	//Dprint("^","\n");
+
+
             if (currentRowPage > 0)
             {
                 currentRowPage--;
                 startRow = currentRowPage * numRows + 1;
-//                saveProfile(profile, profile.profileId); // Save profile on navigation
-                saveProfile(profile);
             }
+			delay(50);
+			//Dprint("currowpage=",currentRowPage);
         }
 
-        else if (touch_tag == 27) // Down button
+        else if (touch_tag == 26) // Down button
         {
-            if (currentRowPage < (profile.Tube_No_y / numRows)) // Change here
+        	//Dprint("v","\n");
+
+            if (currentRowPage < ((profile.Tube_No_y / maxRowsPerPage) - ((profile.Tube_No_y % maxRowsPerPage) ? 0 : 1))) // Change here
             {
+        				Dprint("rin");
                 currentRowPage++;
                 startRow = currentRowPage * numRows + 1;
-//                saveProfile(profile, profile.profileId); // Save profile on navigation
-                saveProfile(profile);
             }
+			delay(50);
+			//Dprint("currowpage=",currentRowPage);
         }
 
         if (currentPage == numPages - 1)
@@ -2136,6 +1804,8 @@ void Tray_Screen(Gpu_Hal_Context_t *phost, Profile &profile)
             currentPageRows = numRows;
             currentPageCols = numCols;
         }
+
         Disp_End(phost);
+		if(touch_tag !=0) WaitKeyRelease();//delay(100);
     }
 }

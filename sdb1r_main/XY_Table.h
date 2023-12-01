@@ -34,49 +34,34 @@ struct PauseState
     long lastY;
     ActionState lastAction;
     // ActionState currentAction;
-    bool isPaused;
-    bool pendingPause; // New flag for pending pause command
-    float remainingDistanceX;
-    float remainingDistanceY;
-    bool filledTubes[MAX_TUBES_X][MAX_TUBES_Y];
     int32_t currentCycle;
 };
 
-//void checkButtonTag();
-bool checkButtonTag(uint8_t buttonTag);
 
 void activateDispenser(void);
 
 void GPIO_Setup(void);
 void init_Motors(void);
-void Homing(void);
+bool Homing(void);
 
 void runStepper(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg, ActionState actionState);
 
-bool runStepper_normal(AccelStepper &stepper, int distance, uint8_t limitPin, const char *limitMsg); //soon
+uint8_t runStepper_normal(AccelStepper &stepper, long distance, uint8_t limitPin); 
 void returnToStart();
-void updateStateMachine(uint8_t buttonTag);
 // void checkAndMoveStepper(AccelStepper &stepper, int steps, int limit, const char *message, ActionState action);
 
 void checkAndMoveStepper_normal(AccelStepper &stepper, int steps, int limit, const char *message);
-bool vibrateAndCheckPause();//soon
-bool dispenseAndCheckPause();//soon
+uint8_t vibrateAndCheckPause();
+uint8_t dispenseAndCheckPause();
 void Run_profile();
-// void Resume_profile();
-void RunOrResume_profile(bool isResuming);
+
 
 void xy_init(void);
 void xy_main(void);
 
 bool performVibrateAndDispenseOperations();
-void handleCycleStatus(int cycle);
-void finishProcess();
-void clearPauseState();
-
 void startProcess();
-void pausedProcess();
 void resumeProcess();
-void stopProcess();
 
 
 #endif /*_XY_TABLE_H_*/
